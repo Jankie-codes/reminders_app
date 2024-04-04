@@ -7,6 +7,7 @@ typedef struct Reminder {
 	time_t* datetime;
 	char* message;
 	char* description;
+	int* id;
 } Reminder;
 
 void addReminder(char* message, time_t* datetime, char* desc, Reminder** reminders, int* capacity, int* numItems) {
@@ -21,6 +22,9 @@ void addReminder(char* message, time_t* datetime, char* desc, Reminder** reminde
 	reminderToAdd->message = message;
 	reminderToAdd->description = desc;
 	reminderToAdd->datetime = datetime;
+	reminderToAdd->id = malloc(sizeof(int));
+	*(reminderToAdd->id) = 1;
+	printf("%d\n",reminderToAdd->id);
 	
 	reminders[*numItems - 1] = reminderToAdd;
 }
@@ -55,8 +59,10 @@ int main(int argc, char** argv) {
 		if (strcmp("add", argv[1]) == 0) {
 					addReminder("samplmessage", newDateTime(5, 25, 123, 12, 0), "desc", reminders, capacity, numItems);
 					printf("task add\n");
-					printf("%s\n", reminders[0]->message);
-					printf("%p\n", reminders[0]->datetime);
+					//printf("%s\n", reminders[0]->message);
+					//printf("%p\n", reminders[0]->datetime);
+					printf("%d\n", reminders[0]->id);
+					printf("%d\n", *(reminders[0]->id));
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					printf("task ls or task l\n");
 		} else if (strcmp("edit", argv[1]) == 0) {
