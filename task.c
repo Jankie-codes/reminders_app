@@ -24,7 +24,7 @@ void addReminder(char* message, time_t* datetime, char* desc, Reminder** reminde
 	reminderToAdd->datetime = datetime;
 	reminderToAdd->id = malloc(sizeof(int));
 	*(reminderToAdd->id) = 1;
-	printf("%d\n",reminderToAdd->id);
+	//printf("%d\n",reminderToAdd->id);
 	
 	reminders[*numItems - 1] = reminderToAdd;
 }
@@ -43,26 +43,41 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 	time_t* time_epoch = malloc(sizeof(time_t));
 	*time_epoch = mktime(&value);
    
-  printf("Time and date: %s", ctime(time_epoch));
-	printf("%p\n", time_epoch);
+  //printf("Time and date: %s", ctime(time_epoch));
+	//printf("%p\n", time_epoch);
 	return time_epoch;
+}
+
+void rewriteFile(Reminder** remindersList, FILE* fptr) {
+	int test = 420;
+		for (int i = 0; i < (sizeof(remindersList) / sizeof(remindersList[0])); i++) {
+			fscanf(fptr, "%d", &test);
+		}
 }
 
 
 int main(int argc, char** argv) {
+		FILE* fptr;
 		int* capacity = malloc(sizeof(int));
 		int* numItems = malloc(sizeof(int));
 		*capacity = 1;
 		*numItems = 0;
 		Reminder** reminders = malloc(sizeof(Reminder));
-
+		fptr = fopen("./reminders_save_file.txt","w");
+		if (fptr == NULL) {
+			printf("Error opening file.");
+			exit(1);
+		}
 		if (strcmp("add", argv[1]) == 0) {
 					addReminder("samplmessage", newDateTime(5, 25, 123, 12, 0), "desc", reminders, capacity, numItems);
-					printf("task add\n");
+					//printf("task add\n");
 					//printf("%s\n", reminders[0]->message);
 					//printf("%p\n", reminders[0]->datetime);
-					printf("%d\n", reminders[0]->id);
-					printf("%d\n", *(reminders[0]->id));
+					//printf("%d\n", reminders[0]->id);
+					//printf("%d\n", *(reminders[0]->id));
+					//printf("%d\n", sizeof(reminders) / sizeof(reminders[0]));
+					rewriteFile(reminders, fptr);
+					fclose(fptr);
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					printf("task ls or task l\n");
 		} else if (strcmp("edit", argv[1]) == 0) {
