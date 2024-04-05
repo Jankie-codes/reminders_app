@@ -49,9 +49,8 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 }
 
 void rewriteFile(Reminder** remindersList, FILE* fptr) {
-	int test = 420;
 		for (int i = 0; i < (sizeof(remindersList) / sizeof(remindersList[0])); i++) {
-			fscanf(fptr, "%d", &test);
+			fprintf(fptr, "%s", remindersList[i]->message);
 		}
 }
 
