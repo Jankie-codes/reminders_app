@@ -50,8 +50,20 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 
 void rewriteFile(Reminder** remindersList, FILE* fptr) {
 		for (int i = 0; i < (sizeof(remindersList) / sizeof(remindersList[0])); i++) {
+			//fwrite(remindersList[i]->message, sizeof(char) * strlen(remindersList[i]->message), 1, fptr);
+			fprintf(fptr, "%d\n", strlen(remindersList[i]->message));
 			fprintf(fptr, "%s", remindersList[i]->message);
 		}
+}
+
+void readFile(FILE* fptr) {
+	int fileTextLen;
+	fscanf(fptr, "%d\n", &fileTextLen);
+	fileTextLen++; //increments the string length to account for the null character at the end when reading
+	char fileText[fileTextLen];
+	fgets(fileText, fileTextLen, fptr);
+	printf("%d\n", fileTextLen);
+	printf("%s\n", fileText);
 }
 
 
@@ -62,23 +74,30 @@ int main(int argc, char** argv) {
 		*capacity = 1;
 		*numItems = 0;
 		Reminder** reminders = malloc(sizeof(Reminder));
-		fptr = fopen("./reminders_save_file.txt","w");
-		if (fptr == NULL) {
-			printf("Error opening file.");
-			exit(1);
-		}
 		if (strcmp("add", argv[1]) == 0) {
-					addReminder("samplmessage", newDateTime(5, 25, 123, 12, 0), "desc", reminders, capacity, numItems);
+					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "desc", reminders, capacity, numItems);
 					//printf("task add\n");
 					//printf("%s\n", reminders[0]->message);
 					//printf("%p\n", reminders[0]->datetime);
 					//printf("%d\n", reminders[0]->id);
 					//printf("%d\n", *(reminders[0]->id));
 					//printf("%d\n", sizeof(reminders) / sizeof(reminders[0]));
+					fptr = fopen("./reminders_save_file.txt","w");
+					if (fptr == NULL) {
+						printf("Error opening file.");
+						exit(1);
+					}
 					rewriteFile(reminders, fptr);
 					fclose(fptr);
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					printf("task ls or task l\n");
+					fptr = fopen("./reminders_save_file.txt","r");
+					if (fptr == NULL) {
+						printf("Error opening file.");
+						exit(1);
+					}
+					readFile(fptr);
+					fclose(fptr);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
 		} else if (strcmp("remove", argv[1]) == 0) {

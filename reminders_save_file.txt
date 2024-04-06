@@ -1,1 +1,2 @@
-samplmessage
+24
+samplmessage with spaces
