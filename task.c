@@ -10,23 +10,51 @@ typedef struct Reminder {
 	int* id;
 } Reminder;
 
-void addReminder(char* message, time_t* datetime, char* desc, Reminder** reminders, int* capacity, int* numItems) {
-	if (*numItems == *capacity) {
-			*capacity *= 2;
-			reminders = realloc(reminders, (sizeof(Reminder) * *capacity));
-	}
-	*numItems += 1;
-	Reminder* reminderToAdd = malloc(sizeof(Reminder));
-	reminderToAdd->message = malloc(sizeof(char)*2048);
-	reminderToAdd->description = malloc(sizeof(char)*2048);
-	reminderToAdd->message = message;
-	reminderToAdd->description = desc;
-	reminderToAdd->datetime = datetime;
-	reminderToAdd->id = malloc(sizeof(int));
-	*(reminderToAdd->id) = 1;
-	//printf("%d\n",reminderToAdd->id);
+typedef struct ReminderArray {
+	Reminder** array;
+	size_t used;
+	size_t size;
+} ReminderArray;
+
+void initReminderArray(ReminderArray* a, size_t initialSize) {
+  a->array = malloc(initialSize * sizeof(int));
+  a->used = 0;
+  a->size = initialSize;
+}
+
+void addToReminderArray(ReminderArray* a, Reminder* element) {
+  // a->used is the number of used entries, because a->array[a->used++] updates a->used only *after* the array has been accessed.
+  // Therefore a->used can go up to a->size 
+  if (a->used == a->size) {
+    a->size *= 2;
+    a->array = realloc(a->array, a->size * sizeof(element));
+  }
+  a->array[a->used++] = element;
+}
+
+void freeReminderArray(ReminderArray* a) {
+  free(a->array);
+  a->array = NULL;
+  a->used = a->size = 0;
+}
+
+Reminder* makeReminder(char* message, time_t* datetime, char* desc, ReminderArray* reminders) {
+	Reminder* reminderToMake = malloc(sizeof(Reminder));
+	reminderToMake->message = malloc(sizeof(char)*2048); //yeah, we gotta change these strings to allow for length > 2048
+	reminderToMake->description = malloc(sizeof(char)*2048);
+	reminderToMake->message = message;
+	reminderToMake->description = desc;
+	reminderToMake->datetime = datetime;
+	reminderToMake->id = malloc(sizeof(int));
+	*(reminderToMake->id) = 1;
 	
-	reminders[*numItems - 1] = reminderToAdd;
+	return reminderToMake;
+}
+
+void addReminder(char* message, time_t* datetime, char* desc, ReminderArray* reminders) {
+	//printf("%d\n",reminderToAdd->id);
+	Reminder* reminderToAdd = makeReminder(message, datetime, desc, reminders);
+	addToReminderArray(reminders, reminderToAdd);
 }
 
 time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
@@ -46,23 +74,24 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 	*time_epoch = mktime(&value);
    
   //printf("Time and date: %s", ctime(time_epoch));
-	//printf("%p\n", time_epoch);
+	//printf("TIMEDATE POINTER: %p\n", time_epoch);
 
 	return time_epoch;
 }
 
-void rewriteFile(Reminder** remindersList, FILE* fptr) {
-		for (int i = 0; i < (sizeof(remindersList) / sizeof(remindersList[0])); i++) {
+void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
+		for (int i = 0; i < remindersList->size; i++) {
+			//printf("%d\n",i);
 			//fwrite(remindersList[i]->message, sizeof(char) * strlen(remindersList[i]->message), 1, fptr);
-			fprintf(fptr, "%d\n", *(remindersList[i]->id));
-			fprintf(fptr, "%d\n", strlen(remindersList[i]->message));
-			fprintf(fptr, "%s\n", remindersList[i]->message);
-			fprintf(fptr, "%d\n", strlen(remindersList[i]->description));
-			fprintf(fptr, "%s\n", remindersList[i]->description);
+			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
+			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->message));
+			fprintf(fptr, "%s\n", remindersList->array[i]->message);
+			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->description));
+			fprintf(fptr, "%s\n", remindersList->array[i]->description);
 
 			struct tm* dateToSave;
 
-			dateToSave = localtime(remindersList[i]->datetime);
+			dateToSave = localtime(remindersList->array[i]->datetime);
 
 			fprintf(fptr, "%d %d %d %d %d\n", dateToSave->tm_mon, dateToSave->tm_mday, dateToSave->tm_year, dateToSave->tm_hour, dateToSave->tm_min);
 		}
@@ -111,25 +140,26 @@ void readFile(FILE* fptr) {
 
 int main(int argc, char** argv) {
 		FILE* fptr;
-		int* capacity = malloc(sizeof(int));
-		int* numItems = malloc(sizeof(int));
-		*capacity = 1;
-		*numItems = 0;
-		Reminder** reminders = malloc(sizeof(Reminder));
+		ReminderArray remindersList;
+		initReminderArray(&remindersList, 1);
+
 		if (strcmp("add", argv[1]) == 0) {
-					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "desc", reminders, capacity, numItems);
 					//printf("task add\n");
-					//printf("%s\n", reminders[0]->message);
-					//printf("%p\n", reminders[0]->datetime);
-					//printf("%d\n", reminders[0]->id);
-					//printf("%d\n", *(reminders[0]->id));
-					//printf("%d\n", sizeof(reminders) / sizeof(reminders[0]));
+					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "sample description.", &remindersList);
+					addReminder("second reminder", newDateTime(3,27,124,12,0), "second desc", &remindersList);
+					for (int i = 0; i < remindersList.size; i++) {
+							printf("%s\n", remindersList.array[i]->message);
+							printf("%s\n", remindersList.array[i]->description);
+							printf("%s", ctime(remindersList.array[i]->datetime));
+							//printf("%d\n", remindersList.array[i]->id);
+							printf("%d\n", *(remindersList.array[i]->id));
+					}
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
 						printf("Error opening file.");
 						exit(1);
 					}
-					rewriteFile(reminders, fptr);
+					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					printf("task ls or task l\n");
@@ -138,7 +168,8 @@ int main(int argc, char** argv) {
 						printf("Error opening file.");
 						exit(1);
 					}
-					readFile(fptr);
+					readFile(fptr); //read the first reminder
+					readFile(fptr); //read the second reminder
 					fclose(fptr);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
