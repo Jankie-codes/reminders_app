@@ -51,19 +51,34 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 void rewriteFile(Reminder** remindersList, FILE* fptr) {
 		for (int i = 0; i < (sizeof(remindersList) / sizeof(remindersList[0])); i++) {
 			//fwrite(remindersList[i]->message, sizeof(char) * strlen(remindersList[i]->message), 1, fptr);
+			fprintf(fptr, "%d\n", *(remindersList[i]->id));
 			fprintf(fptr, "%d\n", strlen(remindersList[i]->message));
-			fprintf(fptr, "%s", remindersList[i]->message);
+			fprintf(fptr, "%s\n", remindersList[i]->message);
+			fprintf(fptr, "%d\n", strlen(remindersList[i]->description));
+			fprintf(fptr, "%s\n", remindersList[i]->description);
 		}
 }
 
 void readFile(FILE* fptr) {
-	int fileTextLen;
-	fscanf(fptr, "%d\n", &fileTextLen);
-	fileTextLen++; //increments the string length to account for the null character at the end when reading
-	char fileText[fileTextLen];
-	fgets(fileText, fileTextLen, fptr);
-	printf("%d\n", fileTextLen);
-	printf("%s\n", fileText);
+	int id;
+	fscanf(fptr, "%d\n", &id);
+	int messageLen;
+	fscanf(fptr, "%d\n", &messageLen);
+	messageLen++; //increments the string length to account for the null character at the end when reading
+	char message[messageLen];
+	fgets(message, messageLen, fptr);
+
+	int descLen;
+	fscanf(fptr, "%d\n", &descLen);
+	descLen++; //increments the string length to account for the null character at the end when reading
+	char desc[descLen];
+	fgets(desc, descLen, fptr);
+
+	printf("%d\n", id);
+	printf("%d\n", messageLen);
+	printf("%s\n", message);
+	printf("%d\n", descLen);
+	printf("%s\n", desc);
 }
 
 
