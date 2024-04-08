@@ -40,11 +40,14 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
   value.tm_year = year;
 	value.tm_isdst = -1;
 
+	//printf("%d\n", value.tm_sec);
+	
 	time_t* time_epoch = malloc(sizeof(time_t));
 	*time_epoch = mktime(&value);
    
   //printf("Time and date: %s", ctime(time_epoch));
 	//printf("%p\n", time_epoch);
+
 	return time_epoch;
 }
 
@@ -56,6 +59,12 @@ void rewriteFile(Reminder** remindersList, FILE* fptr) {
 			fprintf(fptr, "%s\n", remindersList[i]->message);
 			fprintf(fptr, "%d\n", strlen(remindersList[i]->description));
 			fprintf(fptr, "%s\n", remindersList[i]->description);
+
+			struct tm* dateToSave;
+
+			dateToSave = localtime(remindersList[i]->datetime);
+
+			fprintf(fptr, "%d %d %d %d %d\n", dateToSave->tm_mon, dateToSave->tm_mday, dateToSave->tm_year, dateToSave->tm_hour, dateToSave->tm_min);
 		}
 }
 
@@ -74,11 +83,29 @@ void readFile(FILE* fptr) {
 	char desc[descLen];
 	fgets(desc, descLen, fptr);
 
+	int month;
+	int day;
+	int year;
+	int hours;
+	int minutes;
+
+	fscanf(fptr, "%d ", &month);
+	fscanf(fptr, "%d ", &day);
+	fscanf(fptr, "%d ", &year);
+	fscanf(fptr, "%d ", &hours);
+	fscanf(fptr, "%d ", &minutes);
+
 	printf("%d\n", id);
 	printf("%d\n", messageLen);
 	printf("%s\n", message);
 	printf("%d\n", descLen);
 	printf("%s\n", desc);
+
+	printf("%d\n", month);
+	printf("%d\n", day);
+	printf("%d\n", year);
+	printf("%d\n", hours);
+	printf("%d\n", minutes);
 }
 
 
