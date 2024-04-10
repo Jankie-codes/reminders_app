@@ -17,7 +17,7 @@ typedef struct ReminderArray {
 } ReminderArray;
 
 void initReminderArray(ReminderArray* a, size_t initialSize) {
-  a->array = malloc(initialSize * sizeof(int));
+  a->array = malloc(initialSize * sizeof(Reminder));
   a->used = 0;
   a->size = initialSize;
 }
@@ -27,7 +27,7 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
   // Therefore a->used can go up to a->size 
   if (a->used == a->size) {
     a->size *= 2;
-    a->array = realloc(a->array, a->size * sizeof(element));
+    a->array = realloc(a->array, a->size * sizeof(Reminder));
   }
   a->array[a->used++] = element;
 }
@@ -48,8 +48,8 @@ void freeReminderArray(ReminderArray* a) {
 
 Reminder* makeReminder(char* message, time_t* datetime, char* desc, ReminderArray* reminders) {
 	Reminder* reminderToMake = malloc(sizeof(Reminder));
-	reminderToMake->message = malloc(sizeof(char)*2048); //yeah, we gotta change these strings to allow for length > 2048
-	reminderToMake->description = malloc(sizeof(char)*2048);
+	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
+	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
 	//reminderToMake->message = message;
 	//reminderToMake->description = desc;
 	strcpy(reminderToMake->message, message);
@@ -158,11 +158,12 @@ int main(int argc, char** argv) {
 					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "sample description.", &remindersList);
 					addReminder("second reminder", newDateTime(3,27,124,12,0), "second desc", &remindersList);
 					for (int i = 0; i < remindersList.used; i++) {
-							printf("%s\n", remindersList.array[i]->message);
+							printf("%d\n", i);
+							/*printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
 							printf("%s", ctime(remindersList.array[i]->datetime));
 							//printf("%d\n", remindersList.array[i]->id);
-							printf("%d\n", *(remindersList.array[i]->id));
+							printf("%d\n", *(remindersList.array[i]->id));*/
 					}
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
