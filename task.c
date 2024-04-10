@@ -33,6 +33,14 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
 }
 
 void freeReminderArray(ReminderArray* a) {
+	for (int i = 0; i < a->used; i++) {
+		free(a->array[i]->message);
+		free(a->array[i]->description);
+		free(a->array[i]->datetime);
+		free(a->array[i]->id);
+		free(a->array[i]);
+	}
+
   free(a->array);
   a->array = NULL;
   a->used = a->size = 0;
@@ -42,8 +50,10 @@ Reminder* makeReminder(char* message, time_t* datetime, char* desc, ReminderArra
 	Reminder* reminderToMake = malloc(sizeof(Reminder));
 	reminderToMake->message = malloc(sizeof(char)*2048); //yeah, we gotta change these strings to allow for length > 2048
 	reminderToMake->description = malloc(sizeof(char)*2048);
-	reminderToMake->message = message;
-	reminderToMake->description = desc;
+	//reminderToMake->message = message;
+	//reminderToMake->description = desc;
+	strcpy(reminderToMake->message, message);
+	strcpy(reminderToMake->description, desc);
 	reminderToMake->datetime = datetime;
 	reminderToMake->id = malloc(sizeof(int));
 	*(reminderToMake->id) = 1;
@@ -80,7 +90,7 @@ time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 }
 
 void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
-		for (int i = 0; i < remindersList->size; i++) {
+		for (int i = 0; i < remindersList->used; i++) {
 			//printf("%d\n",i);
 			//fwrite(remindersList[i]->message, sizeof(char) * strlen(remindersList[i]->message), 1, fptr);
 			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
@@ -147,7 +157,7 @@ int main(int argc, char** argv) {
 					//printf("task add\n");
 					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "sample description.", &remindersList);
 					addReminder("second reminder", newDateTime(3,27,124,12,0), "second desc", &remindersList);
-					for (int i = 0; i < remindersList.size; i++) {
+					for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
 							printf("%s", ctime(remindersList.array[i]->datetime));
@@ -180,5 +190,6 @@ int main(int argc, char** argv) {
 		} else if (strcmp("redo", argv[1])== 0) {
 					printf("task redo\n");
 		}
+		freeReminderArray(&remindersList);
 }
 
