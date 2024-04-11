@@ -107,33 +107,37 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 		}
 }
 
-void readFile(FILE* fptr) {
-	int id;
-	fscanf(fptr, "%d\n", &id);
-	int messageLen;
-	fscanf(fptr, "%d\n", &messageLen);
-	messageLen++; //increments the string length to account for the null character at the end when reading
-	char message[messageLen];
-	fgets(message, messageLen, fptr);
+void readFile(ReminderArray* remindersList, FILE* fptr) {
+	while (feof(fptr) == 0) {
+		int id;
+		fscanf(fptr, "%d\n", &id);
+		int messageLen;
+		fscanf(fptr, "%d\n", &messageLen);
+		messageLen++; //increments the string length to account for the null character at the end when reading
+		char message[messageLen];
+		fgets(message, messageLen, fptr);
+	
+		int descLen;
+		fscanf(fptr, "%d\n", &descLen);
+		descLen++; //increments the string length to account for the null character at the end when reading
+		char desc[descLen];
+		fgets(desc, descLen, fptr);
+		
+		int month;
+		int day;
+		int year;
+		int hours;
+		int minutes;
+	
+		fscanf(fptr, "%d\n", &month);
+		fscanf(fptr, "%d ", &day);
+		fscanf(fptr, "%d ", &year);
+		fscanf(fptr, "%d ", &hours);
+		fscanf(fptr, "%d\n", &minutes);
 
-	int descLen;
-	fscanf(fptr, "%d\n", &descLen);
-	descLen++; //increments the string length to account for the null character at the end when reading
-	char desc[descLen];
-	fgets(desc, descLen, fptr);
-
-	int month;
-	int day;
-	int year;
-	int hours;
-	int minutes;
-
-	fscanf(fptr, "%d ", &month);
-	fscanf(fptr, "%d ", &day);
-	fscanf(fptr, "%d ", &year);
-	fscanf(fptr, "%d ", &hours);
-	fscanf(fptr, "%d ", &minutes);
-
+		addReminder(message, newDateTime(month, day, year, hours, minutes), desc, remindersList);
+	}
+/*
 	printf("%d\n", id);
 	printf("%d\n", messageLen);
 	printf("%s\n", message);
@@ -144,7 +148,7 @@ void readFile(FILE* fptr) {
 	printf("%d\n", day);
 	printf("%d\n", year);
 	printf("%d\n", hours);
-	printf("%d\n", minutes);
+	printf("%d\n", minutes);*/
 }
 
 
@@ -157,8 +161,9 @@ int main(int argc, char** argv) {
 					//printf("task add\n");
 					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "sample description.", &remindersList);
 					addReminder("second reminder", newDateTime(3,27,124,12,0), "second desc", &remindersList);
+					addReminder("third reminder", newDateTime(3,27,124,12,0), "third sec", &remindersList);
 					for (int i = 0; i < remindersList.used; i++) {
-							printf("%d\n", i);
+							//printf("%d\n", i);
 							/*printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
 							printf("%s", ctime(remindersList.array[i]->datetime));
@@ -179,8 +184,16 @@ int main(int argc, char** argv) {
 						printf("Error opening file.");
 						exit(1);
 					}
-					readFile(fptr); //read the first reminder
-					readFile(fptr); //read the second reminder
+					readFile(&remindersList, fptr);
+					for (int i = 0; i < remindersList.used; i++) {
+							printf("%s\n", remindersList.array[i]->message);
+							printf("%s\n", remindersList.array[i]->description);
+							printf("%s", ctime(remindersList.array[i]->datetime));
+							//printf("%d\n", remindersList.array[i]->id);
+							printf("%d\n", *(remindersList.array[i]->id));
+							printf("END OF REMINDER\n");
+					}
+
 					fclose(fptr);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
