@@ -1,10 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include<stdbool.h>
 #include <time.h>
 
+typedef struct OptionalDateTime {
+	time_t* value;
+	bool* valid;
+} OptionalDateTime;
+
 typedef struct Reminder {
-	time_t* datetime;
+	OptionalDateTime* datetime;
 	char* message;
 	char* description;
 	int* id;
@@ -15,6 +21,21 @@ typedef struct ReminderArray {
 	size_t used;
 	size_t size;
 } ReminderArray;
+
+OptionalDateTime* mallocOptionalDateTime(time_t* value, bool valid) {
+	OptionalDateTime* newOptionalDateTime = malloc(sizeof(OptionalDateTime));
+	bool* pValid = malloc(sizeof(bool));
+	*pValid = valid;
+	newOptionalDateTime->value = value;
+	newOptionalDateTime->valid = pValid;
+	return newOptionalDateTime;
+}
+
+void freeOptionalDateTime(OptionalDateTime* odt) {
+	free(odt->value);
+	free(odt->valid);
+	free(odt);
+}
 
 void initReminderArray(ReminderArray* a, size_t initialSize) {
   a->array = malloc(initialSize * sizeof(Reminder));
@@ -36,7 +57,7 @@ void freeReminderArray(ReminderArray* a) {
 	for (int i = 0; i < a->used; i++) {
 		free(a->array[i]->message);
 		free(a->array[i]->description);
-		free(a->array[i]->datetime);
+		freeOptionalDateTime(a->array[i]->datetime);
 		free(a->array[i]->id);
 		free(a->array[i]);
 	}
@@ -46,7 +67,7 @@ void freeReminderArray(ReminderArray* a) {
   a->used = a->size = 0;
 }
 
-Reminder* makeReminder(char* message, time_t* datetime, char* desc, ReminderArray* reminders) {
+Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
 	Reminder* reminderToMake = malloc(sizeof(Reminder));
 	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
 	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
@@ -61,7 +82,7 @@ Reminder* makeReminder(char* message, time_t* datetime, char* desc, ReminderArra
 	return reminderToMake;
 }
 
-void addReminder(char* message, time_t* datetime, char* desc, ReminderArray* reminders) {
+void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
 	//printf("%d\n",reminderToAdd->id);
 	Reminder* reminderToAdd = makeReminder(message, datetime, desc, reminders);
 	addToReminderArray(reminders, reminderToAdd);
@@ -98,17 +119,24 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 			fprintf(fptr, "%s\n", remindersList->array[i]->message);
 			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->description));
 			fprintf(fptr, "%s\n", remindersList->array[i]->description);
+			fprintf(fptr, "%d\n", *(remindersList->array[i]->datetime->valid));
+			if (*(remindersList->array[i]->datetime->valid)) {
+				struct tm* dateToSave;
 
-			struct tm* dateToSave;
+				dateToSave = localtime(remindersList->array[i]->datetime->value);
 
-			dateToSave = localtime(remindersList->array[i]->datetime);
+				fprintf(fptr, "%d %d %d %d %d\n", dateToSave->tm_mon, dateToSave->tm_mday, dateToSave->tm_year, dateToSave->tm_hour, dateToSave->tm_min);
 
-			fprintf(fptr, "%d %d %d %d %d\n", dateToSave->tm_mon, dateToSave->tm_mday, dateToSave->tm_year, dateToSave->tm_hour, dateToSave->tm_min);
+			} else {
+				fprintf(fptr, "0 0 0 0 0\n");
+			}
 		}
 }
 
 void readFile(ReminderArray* remindersList, FILE* fptr) {
+	//int acc = 0;
 	while (feof(fptr) == 0) {
+		//printf("ACC: %d\n", acc);
 		int id;
 		fscanf(fptr, "%d\n", &id);
 		int messageLen;
@@ -128,14 +156,19 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 		int year;
 		int hours;
 		int minutes;
-	
+		
+		int valid;
+
+		fscanf(fptr, "%d\n", &valid);
+
 		fscanf(fptr, "%d\n", &month);
 		fscanf(fptr, "%d ", &day);
 		fscanf(fptr, "%d ", &year);
 		fscanf(fptr, "%d ", &hours);
 		fscanf(fptr, "%d\n", &minutes);
-
-		addReminder(message, newDateTime(month, day, year, hours, minutes), desc, remindersList);
+	
+		addReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc, remindersList);
+		//acc++;
 	}
 /*
 	printf("%d\n", id);
@@ -151,6 +184,14 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 	printf("%d\n", minutes);*/
 }
 
+void parseArgvAddReminder(char** argv) {
+	char* message = argv[2];
+	int month, day, year, hours, minutes;
+	char* description;
+
+	
+}
+
 
 int main(int argc, char** argv) {
 		FILE* fptr;
@@ -158,10 +199,11 @@ int main(int argc, char** argv) {
 		initReminderArray(&remindersList, 1);
 
 		if (strcmp("add", argv[1]) == 0) {
+					parseArgvAddReminder(argv);
 					//printf("task add\n");
-					addReminder("samplmessage with spaces", newDateTime(5, 25, 123, 12, 0), "sample description.", &remindersList);
-					addReminder("second reminder", newDateTime(3,27,124,12,0), "second desc", &remindersList);
-					addReminder("third reminder", newDateTime(3,27,124,12,0), "third sec", &remindersList);
+					addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
+					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "second desc", &remindersList);
+					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
 					for (int i = 0; i < remindersList.used; i++) {
 							//printf("%d\n", i);
 							/*printf("%s\n", remindersList.array[i]->message);
@@ -188,7 +230,8 @@ int main(int argc, char** argv) {
 					for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
-							printf("%s", ctime(remindersList.array[i]->datetime));
+							printf("datetime valid or not: %d\n", *(remindersList.array[i]->datetime->valid));
+							printf("%s", ctime(remindersList.array[i]->datetime->value));
 							//printf("%d\n", remindersList.array[i]->id);
 							printf("%d\n", *(remindersList.array[i]->id));
 							printf("END OF REMINDER\n");
