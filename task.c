@@ -184,12 +184,41 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 	printf("%d\n", minutes);*/
 }
 
-void parseArgvAddReminder(char** argv) {
+void parseArgsAddReminder(int argc, char** argv) {
 	char* message = argv[2];
 	int month, day, year, hours, minutes;
 	char* description;
+	char* recentFlag = "";
 
+	printf("Message: %s\n", message);
 	
+	for (int i = 3; i < argc; i++) {
+		if (strcmp("", recentFlag) == 0) {
+			recentFlag = argv[i];
+		} else if (strcmp("-d", recentFlag) == 0) {
+			printf("-d\n");
+			recentFlag = "";
+		} else if (strcmp("-t", recentFlag) == 0) {
+			printf("-t\n");
+			recentFlag = "";
+		} else if (strcmp("-e", recentFlag) == 0) {
+			printf("-e\n");
+			recentFlag = "";
+		} else {
+			printf("%s\n", recentFlag);
+			printf("error in arguments\n");
+			exit(1);
+		}
+	}
+	if (recentFlag[0] == '-') {
+		printf("error: flag was specified, but no argument for it entered\n");
+		exit(1);
+	} else if (!(strcmp("", recentFlag) == 0)) {
+		printf("error in arguments\n");
+		exit(1);
+	}
+	printf("arguments are proper\n");
+	//printf("recentFlag: %s\n", recentFlag);
 }
 
 
@@ -199,10 +228,10 @@ int main(int argc, char** argv) {
 		initReminderArray(&remindersList, 1);
 
 		if (strcmp("add", argv[1]) == 0) {
-					parseArgvAddReminder(argv);
+					parseArgsAddReminder(argc, argv);
 					//printf("task add\n");
 					addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
-					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "second desc", &remindersList);
+					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
 					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
 					for (int i = 0; i < remindersList.used; i++) {
 							//printf("%d\n", i);
