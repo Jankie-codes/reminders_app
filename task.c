@@ -184,6 +184,45 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 	printf("%d\n", minutes);*/
 }
 
+int wdayStrToInt(char* wdayStr) {
+	char days[14][10] = {"sun", "sunday", "mon", "monday", "tues", "tuesday", "wed", "wednesday", "thurs", "thursday", "fri", "friday", "sat", "saturday"};
+	for (int i = 0; i < 14; i++) {
+		if (strcmp(days[i], wdayStr) == 0) {
+			return i/2;
+		}
+	}
+	return -1;
+}
+
+//wdayStr is the destination weekday. we go from today to the next week's weekday
+//requires: 0 <= int <= 7
+int daysToWday(char* wdayStr, int today) {
+	int wday = wdayStrToInt(wdayStr);
+	if ((((wday - today) + 7) % 7) == 0) {
+		return 7;
+	} else {
+		return ((wday - today) + 7) % 7;
+	}
+}
+
+struct tm* parseDateArg(char* dateArg) {
+	struct tm date;
+	struct tm* pDate;
+	time_t now = time(0);
+	pDate = localtime(&now);
+
+	if ((strcmp("td", dateArg) == 0) || (strcmp("today", dateArg) == 0)) {
+		//today
+	}
+	else if ((strcmp("tmr", dateArg) == 0) || (strcmp("tomorrow", dateArg) == 0)) {
+	  pDate->tm_mday++;
+	} else if (wdayStrToInt(dateArg) != -1) {
+		pDate->tm_mday += daysToWday(dateArg, pDate->tm_wday);
+	}
+	printf("%d-%d-%d\n", pDate->tm_mon, pDate->tm_mday, (pDate->tm_year - 100));
+	return pDate;
+}
+
 void parseArgsAddReminder(int argc, char** argv) {
 	char* message = argv[2];
 	int month, day, year, hours, minutes;
@@ -198,6 +237,7 @@ void parseArgsAddReminder(int argc, char** argv) {
 		} else if (strcmp("-d", recentFlag) == 0) {
 			printf("-d\n");
 			recentFlag = "";
+			parseDateArg(argv[i]);
 		} else if (strcmp("-t", recentFlag) == 0) {
 			printf("-t\n");
 			recentFlag = "";
@@ -221,7 +261,6 @@ void parseArgsAddReminder(int argc, char** argv) {
 	//printf("recentFlag: %s\n", recentFlag);
 }
 
-
 int main(int argc, char** argv) {
 		FILE* fptr;
 		ReminderArray remindersList;
@@ -233,14 +272,6 @@ int main(int argc, char** argv) {
 					addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
 					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
 					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
-					for (int i = 0; i < remindersList.used; i++) {
-							//printf("%d\n", i);
-							/*printf("%s\n", remindersList.array[i]->message);
-							printf("%s\n", remindersList.array[i]->description);
-							printf("%s", ctime(remindersList.array[i]->datetime));
-							//printf("%d\n", remindersList.array[i]->id);
-							printf("%d\n", *(remindersList.array[i]->id));*/
-					}
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
 						printf("Error opening file.");
