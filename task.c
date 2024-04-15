@@ -184,9 +184,15 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 	printf("%d\n", minutes);*/
 }
 
+void error(char* errorStr) {
+	printf("Error: %s\n", errorStr);
+	exit(1);
+}
+
 int wdayStrToInt(char* wdayStr) {
-	char days[14][10] = {"sun", "sunday", "mon", "monday", "tues", "tuesday", "wed", "wednesday", "thurs", "thursday", "fri", "friday", "sat", "saturday"};
-	for (int i = 0; i < 14; i++) {
+	#define daysSize 14
+	char days[daysSize][10] = {"sun", "sunday", "mon", "monday", "tues", "tuesday", "wed", "wednesday", "thurs", "thursday", "fri", "friday", "sat", "saturday"};
+	for (int i = 0; i < daysSize; i++) {
 		if (strcmp(days[i], wdayStr) == 0) {
 			return i/2;
 		}
@@ -205,57 +211,87 @@ int daysToWday(char* wdayStr, int today) {
 	}
 }
 
-struct tm* parseDateArg(char* dateArg) {
-	struct tm date;
+//0: month 1: day 2: year 3: hours 4: minutes
+int parseDateArg(char* dateArg, int dateField) {
 	struct tm* pDate;
 	time_t now = time(0);
 	pDate = localtime(&now);
 
 	if ((strcmp("td", dateArg) == 0) || (strcmp("today", dateArg) == 0)) {
-		//today
+		//no struct tm modifications necessary
 	}
 	else if ((strcmp("tmr", dateArg) == 0) || (strcmp("tomorrow", dateArg) == 0)) {
 	  pDate->tm_mday++;
 	} else if (wdayStrToInt(dateArg) != -1) {
 		pDate->tm_mday += daysToWday(dateArg, pDate->tm_wday);
+	} else {
+		error("Invalid date argument");
 	}
 	printf("%d-%d-%d\n", pDate->tm_mon, pDate->tm_mday, (pDate->tm_year - 100));
-	return pDate;
+	
+	switch (dateField) {
+		case 0: 
+			return pDate->tm_mon;
+			break;
+		case 1:
+			return pDate->tm_mday;
+			break;
+		case 2:
+			return pDate->tm_year;
+			break;
+		case 3: 
+			return pDate->tm_hour;
+			break;
+		case 4:
+			return pDate->tm_min;
+			break;
+	}
+}
+
+bool errorIfFlagSet(char* flag, bool flagSet) {
+	if (flagSet) {
+		char* errorMessage = strcat(flag, " has been specified twice"); //WARNING: strcat MODIFIES FLAG!!!!! IDK WHY
+		error(errorMessage);
+	}
+	return true;
 }
 
 void parseArgsAddReminder(int argc, char** argv) {
 	char* message = argv[2];
-	int month, day, year, hours, minutes;
+	int dateFields[5]; //month day years hours minutes
 	char* description;
 	char* recentFlag = "";
+	char flags[3][3] = {"-d", "-t", "-e"};
+	bool flagsSet[3] = {false, false, false};
 
 	printf("Message: %s\n", message);
 	
 	for (int i = 3; i < argc; i++) {
 		if (strcmp("", recentFlag) == 0) {
 			recentFlag = argv[i];
-		} else if (strcmp("-d", recentFlag) == 0) {
+		} else if (strcmp(flags[0], recentFlag) == 0) {
 			printf("-d\n");
 			recentFlag = "";
-			parseDateArg(argv[i]);
-		} else if (strcmp("-t", recentFlag) == 0) {
+			errorIfFlagSet(flags[0], flagsSet[0]);
+			for (int f = 0; f < 5; f++) {
+				dateFields[f] = parseDateArg(argv[i], f);
+			}
+			flagsSet[0] = true;
+		} else if (strcmp(flags[1], recentFlag) == 0) {
 			printf("-t\n");
 			recentFlag = "";
-		} else if (strcmp("-e", recentFlag) == 0) {
+		} else if (strcmp(flags[2], recentFlag) == 0) {
 			printf("-e\n");
 			recentFlag = "";
 		} else {
-			printf("%s\n", recentFlag);
-			printf("error in arguments\n");
-			exit(1);
+			printf("flagnotfound: %s\n", recentFlag);
+			error("error in arguments");
 		}
 	}
 	if (recentFlag[0] == '-') {
-		printf("error: flag was specified, but no argument for it entered\n");
-		exit(1);
+		error("error: flag was specified, but no argument for it entered");
 	} else if (!(strcmp("", recentFlag) == 0)) {
-		printf("error in arguments\n");
-		exit(1);
+		error("error in arguments");
 	}
 	printf("arguments are proper\n");
 	//printf("recentFlag: %s\n", recentFlag);
@@ -274,8 +310,7 @@ int main(int argc, char** argv) {
 					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
-						printf("Error opening file.");
-						exit(1);
+						error("Error opening file.");
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
@@ -283,8 +318,7 @@ int main(int argc, char** argv) {
 					printf("task ls or task l\n");
 					fptr = fopen("./reminders_save_file.txt","r");
 					if (fptr == NULL) {
-						printf("Error opening file.");
-						exit(1);
+						error("Error opening file.");
 					}
 					readFile(&remindersList, fptr);
 					for (int i = 0; i < remindersList.used; i++) {
