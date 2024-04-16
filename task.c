@@ -4,6 +4,14 @@
 #include<stdbool.h>
 #include <time.h>
 
+typedef enum ErrStat {
+	EOK = 0,
+	EBADARGS,
+	EDUPFLAG,
+	EBADDATE,
+	EEMPFLAG,
+} ErrStat;
+
 typedef struct OptionalDateTime {
 	time_t* value;
 	bool* valid;
@@ -184,11 +192,6 @@ void readFile(ReminderArray* remindersList, FILE* fptr) {
 	printf("%d\n", minutes);*/
 }
 
-void error(char* errorStr) {
-	printf("Error: %s\n", errorStr);
-	exit(1);
-}
-
 int wdayStrToInt(char* wdayStr) {
 	#define daysSize 14
 	char days[daysSize][10] = {"sun", "sunday", "mon", "monday", "tues", "tuesday", "wed", "wednesday", "thurs", "thursday", "fri", "friday", "sat", "saturday"};
@@ -212,7 +215,7 @@ int daysToWday(char* wdayStr, int today) {
 }
 
 //0: month 1: day 2: year 3: hours 4: minutes
-int parseDateArg(char* dateArg, int dateField) {
+ErrStat parseDateArg(char* dateArg, int dateField, int* fieldsList) {
 	struct tm* pDate;
 	time_t now = time(0);
 	pDate = localtime(&now);
@@ -225,40 +228,47 @@ int parseDateArg(char* dateArg, int dateField) {
 	} else if (wdayStrToInt(dateArg) != -1) {
 		pDate->tm_mday += daysToWday(dateArg, pDate->tm_wday);
 	} else {
-		error("Invalid date argument");
+		return EBADDATE;
 	}
-	printf("%d-%d-%d\n", pDate->tm_mon, pDate->tm_mday, (pDate->tm_year - 100));
+	//printf("%d-%d-%d\n", pDate->tm_mon, pDate->tm_mday, (pDate->tm_year - 100));
 	
 	switch (dateField) {
 		case 0: 
-			return pDate->tm_mon;
+			(*fieldsList) = pDate->tm_mon;
 			break;
 		case 1:
-			return pDate->tm_mday;
+			*(fieldsList+1) = pDate->tm_mday;
 			break;
 		case 2:
-			return pDate->tm_year;
+			*(fieldsList+2) = pDate->tm_year;
 			break;
 		case 3: 
-			return pDate->tm_hour;
+			*(fieldsList+3) = pDate->tm_hour;
 			break;
 		case 4:
-			return pDate->tm_min;
+			*(fieldsList+4) = pDate->tm_min;
 			break;
 	}
+	return EOK;
 }
 
-bool errorIfFlagSet(char* flag, bool flagSet) {
+/*bool errorIfFlagSet(char* flag, bool flagSet) {
 	if (flagSet) {
-		char* errorMessage = strcat(flag, " has been specified twice"); //WARNING: strcat MODIFIES FLAG!!!!! IDK WHY
-		error(errorMessage);
+		//char* errorMessage = strcat(flag, " has been specified twice"); //WARNING: strcat MODIFIES FLAG!!!!! IDK WHY
+		//error(errorMessage);
+		//printf("Duplicate flag: %s\n", flag);
+		//error("duplicate flags");
+		printf("%s has been specified twice\n", flag);
+		return false;
 	}
 	return true;
-}
+}*/
 
-void parseArgsAddReminder(int argc, char** argv) {
+ErrStat parseArgsAddReminder(int argc, char** argv, void** status) {
 	char* message = argv[2];
-	int dateFields[5]; //month day years hours minutes
+	#define dateFieldsSize 5
+	int dateFields[dateFieldsSize]; //month day years hours minutes
+	int* pDateFields = dateFields;
 	char* description;
 	char* recentFlag = "";
 	char flags[3][3] = {"-d", "-t", "-e"};
@@ -272,45 +282,93 @@ void parseArgsAddReminder(int argc, char** argv) {
 		} else if (strcmp(flags[0], recentFlag) == 0) {
 			printf("-d\n");
 			recentFlag = "";
-			errorIfFlagSet(flags[0], flagsSet[0]);
-			for (int f = 0; f < 5; f++) {
-				dateFields[f] = parseDateArg(argv[i], f);
+			if (flagsSet[0]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[0]);
+				return EDUPFLAG;
+			}
+			for (int f = 0; f < dateFieldsSize; f++) {
+				parseDateArg(argv[i], f, pDateFields);
 			}
 			flagsSet[0] = true;
 		} else if (strcmp(flags[1], recentFlag) == 0) {
 			printf("-t\n");
 			recentFlag = "";
+			if (flagsSet[1]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[1]);
+				return EDUPFLAG;
+			}
+
+			//do something
+			flagsSet[1] = true;
 		} else if (strcmp(flags[2], recentFlag) == 0) {
 			printf("-e\n");
 			recentFlag = "";
+			if (flagsSet[2]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[2]);
+				return EDUPFLAG;
+			}
+			//do something
+			flagsSet[2] = true;
 		} else {
 			printf("flagnotfound: %s\n", recentFlag);
-			error("error in arguments");
+			return EBADARGS;
 		}
 	}
 	if (recentFlag[0] == '-') {
-		error("error: flag was specified, but no argument for it entered");
+		return EEMPFLAG;
 	} else if (!(strcmp("", recentFlag) == 0)) {
-		error("error in arguments");
+		return EBADARGS;
 	}
 	printf("arguments are proper\n");
-	//printf("recentFlag: %s\n", recentFlag);
+	for (int i = 0; i < dateFieldsSize; i++) {
+		printf("%d\n", dateFields[i]);
+	}
+	return EOK;
+}
+
+void errHandle(ErrStat errStat, ReminderArray* ra, void** status) {
+	switch (errStat) {
+		case 0: 
+			//ok
+			break;
+		case 1:
+			printf("arguments formatted badly\n");
+			break;
+		case 2:
+			printf("%s was specified twice\n", *status);
+			free(*status);
+			break;
+		case 3:
+			printf("invalid date\n");
+			break;
+	}
+	freeReminderArray(ra);
+	free(status);
+	exit(1);
 }
 
 int main(int argc, char** argv) {
 		FILE* fptr;
 		ReminderArray remindersList;
 		initReminderArray(&remindersList, 1);
+		void** status = malloc(sizeof(void*));
+		ErrStat errStat;
 
 		if (strcmp("add", argv[1]) == 0) {
-					parseArgsAddReminder(argc, argv);
+					errHandle(parseArgsAddReminder(argc, argv, status), &remindersList, status);
+					printf("errstat: %d\n", errStat);
+					//printf("status: %s\n", status);
 					//printf("task add\n");
 					addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
 					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
 					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
-						error("Error opening file.");
+						printf("Error opening file.\n");
+						exit(1);
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
@@ -318,7 +376,8 @@ int main(int argc, char** argv) {
 					printf("task ls or task l\n");
 					fptr = fopen("./reminders_save_file.txt","r");
 					if (fptr == NULL) {
-						error("Error opening file.");
+						printf("Error opening file.\n");
+						exit(1);
 					}
 					readFile(&remindersList, fptr);
 					for (int i = 0; i < remindersList.used; i++) {
