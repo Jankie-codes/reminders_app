@@ -1,15 +1,21 @@
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include<stdbool.h>
 #include <time.h>
+#include<regex.h>
 
 typedef enum ErrStat {
 	EOK = 0,
 	EBADARGS,
 	EDUPFLAG,
 	EBADDATE,
+	EBADFLAG,
+	EBADTIME,
 	EEMPFLAG,
+	EFILE,
+	EOKFINAL,
 } ErrStat;
 
 typedef struct OptionalDateTime {
@@ -29,6 +35,16 @@ typedef struct ReminderArray {
 	size_t used;
 	size_t size;
 } ReminderArray;
+
+bool strContains(char* str, char** strList) {
+	int len = sizeof(strList)/sizeof(strList[0]);
+	for(int i = 0; i < len; i++) {
+ 	   if(strcmp(strList[i], str) == 0) {
+  	      return true;
+    	}
+	}
+	return false;
+}
 
 OptionalDateTime* mallocOptionalDateTime(time_t* value, bool valid) {
 	OptionalDateTime* newOptionalDateTime = malloc(sizeof(OptionalDateTime));
@@ -215,10 +231,12 @@ int daysToWday(char* wdayStr, int today) {
 }
 
 //0: month 1: day 2: year 3: hours 4: minutes
-ErrStat parseDateArg(char* dateArg, int dateField, int* fieldsList) {
+ErrStat setDateField(char* dateArg, int dateField, int* fieldsList) {
 	struct tm* pDate;
 	time_t now = time(0);
 	pDate = localtime(&now);
+	regex_t regex;
+	regcomp(&regex, "^[0-9]{1,2}-[0-9]{1,2}-[0-9]{1,2}$", REG_EXTENDED);
 
 	if ((strcmp("td", dateArg) == 0) || (strcmp("today", dateArg) == 0)) {
 		//no struct tm modifications necessary
@@ -227,7 +245,10 @@ ErrStat parseDateArg(char* dateArg, int dateField, int* fieldsList) {
 	  pDate->tm_mday++;
 	} else if (wdayStrToInt(dateArg) != -1) {
 		pDate->tm_mday += daysToWday(dateArg, pDate->tm_wday);
+	} else if ((strptime(dateArg, "%m-%d-%y", pDate) != 0) && (regexec(&regex, dateArg, 0, NULL, 0) == 0)) {
+		//do nothing as no EBADDATE error occurred
 	} else {
+		regfree(&regex);
 		return EBADDATE;
 	}
 	//printf("%d-%d-%d\n", pDate->tm_mon, pDate->tm_mday, (pDate->tm_year - 100));
@@ -249,68 +270,86 @@ ErrStat parseDateArg(char* dateArg, int dateField, int* fieldsList) {
 			*(fieldsList+4) = pDate->tm_min;
 			break;
 	}
+	regfree(&regex);
 	return EOK;
 }
 
-/*bool errorIfFlagSet(char* flag, bool flagSet) {
-	if (flagSet) {
-		//char* errorMessage = strcat(flag, " has been specified twice"); //WARNING: strcat MODIFIES FLAG!!!!! IDK WHY
-		//error(errorMessage);
-		//printf("Duplicate flag: %s\n", flag);
-		//error("duplicate flags");
-		printf("%s has been specified twice\n", flag);
-		return false;
-	}
-	return true;
-}*/
+ErrStat setTimeField(char* timeArg, int* fieldsList) {
+	struct tm time;
+	struct tm* pTime = &time;
+	regex_t regex;
+	regcomp(&regex, "^([0-9]{1,2}(am|pm))$|^([0-9]{1,2}:[0-9]{2}(am|pm))$", REG_EXTENDED);
 
-ErrStat parseArgsAddReminder(int argc, char** argv, void** status) {
+	if ((strptime(timeArg, "%I%p", pTime) != 0) && (regexec(&regex, timeArg, 0, NULL, 0) == 0)) {
+		//do nothing, no error
+		pTime->tm_min = 0;
+	} else if ((strptime(timeArg, "%I:%M%p", pTime) != 0) && (regexec(&regex, timeArg, 0, NULL, 0) == 0)) {
+		//do nothing, no error
+	} else {
+		regfree(&regex);
+		return EBADTIME;
+	}
+
+	*(fieldsList+3) = pTime->tm_hour;
+	*(fieldsList+4) = pTime->tm_min;
+
+	regfree(&regex);
+	return EOK;
+}
+
+ErrStat parseArgsAddReminder(int argc, char** argv, ReminderArray* ra, void** status) {
 	char* message = argv[2];
 	#define dateFieldsSize 5
 	int dateFields[dateFieldsSize]; //month day years hours minutes
 	int* pDateFields = dateFields;
-	char* description;
+	char* description = "";
 	char* recentFlag = "";
-	char flags[3][3] = {"-d", "-t", "-e"};
+	#define numFlags 3
+	char flags[numFlags][3] = {"-d", "-t", "-e"};
 	bool flagsSet[3] = {false, false, false};
 
-	printf("Message: %s\n", message);
+	for (int i = 0; i < (dateFieldsSize - 2); i++) { //datetime by default
+		setDateField("today", i, pDateFields);
+	}
+	setTimeField("12am", pDateFields);
 	
 	for (int i = 3; i < argc; i++) {
 		if (strcmp("", recentFlag) == 0) {
 			recentFlag = argv[i];
 		} else if (strcmp(flags[0], recentFlag) == 0) {
-			printf("-d\n");
 			recentFlag = "";
 			if (flagsSet[0]) {
 				*status = malloc(sizeof(char)*3);
 				*status = strcpy(*status, flags[0]);
 				return EDUPFLAG;
 			}
-			for (int f = 0; f < dateFieldsSize; f++) {
-				parseDateArg(argv[i], f, pDateFields);
+			for (int f = 0; f < (dateFieldsSize - 2); f++) {
+				ErrStat errStat = setDateField(argv[i], f, pDateFields);
+				if (errStat != 0) {
+					return errStat;
+				}
 			}
 			flagsSet[0] = true;
 		} else if (strcmp(flags[1], recentFlag) == 0) {
-			printf("-t\n");
 			recentFlag = "";
 			if (flagsSet[1]) {
 				*status = malloc(sizeof(char)*3);
 				*status = strcpy(*status, flags[1]);
 				return EDUPFLAG;
 			}
-
-			//do something
+			ErrStat errStat = setTimeField(argv[i], pDateFields);
+			if (errStat != 0) {
+				return errStat;
+			}
 			flagsSet[1] = true;
 		} else if (strcmp(flags[2], recentFlag) == 0) {
-			printf("-e\n");
 			recentFlag = "";
 			if (flagsSet[2]) {
 				*status = malloc(sizeof(char)*3);
 				*status = strcpy(*status, flags[2]);
 				return EDUPFLAG;
 			}
-			//do something
+			description = argv[i];
 			flagsSet[2] = true;
 		} else {
 			printf("flagnotfound: %s\n", recentFlag);
@@ -318,14 +357,28 @@ ErrStat parseArgsAddReminder(int argc, char** argv, void** status) {
 		}
 	}
 	if (recentFlag[0] == '-') {
-		return EEMPFLAG;
+		int flagLength = strlen(recentFlag);
+		flagLength++; //to account for null character \0
+		*status = malloc(sizeof(char) * flagLength);
+		*status = strcpy(*status, recentFlag);
+		
+		for (int i = 0; i < numFlags; i++) {
+			if (strcmp(recentFlag, flags[i]) == 0) {
+				if (flagsSet[i]) {
+					return EDUPFLAG;
+				} else {
+					return EEMPFLAG;
+				}
+			}
+		}
+		return EBADFLAG;
+		
 	} else if (!(strcmp("", recentFlag) == 0)) {
 		return EBADARGS;
 	}
-	printf("arguments are proper\n");
-	for (int i = 0; i < dateFieldsSize; i++) {
-		printf("%d\n", dateFields[i]);
-	}
+
+	addReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description, ra);
+
 	return EOK;
 }
 
@@ -333,7 +386,8 @@ void errHandle(ErrStat errStat, ReminderArray* ra, void** status) {
 	switch (errStat) {
 		case 0: 
 			//ok
-			break;
+			//printf("ok\n");
+			return;
 		case 1:
 			printf("arguments formatted badly\n");
 			break;
@@ -343,6 +397,22 @@ void errHandle(ErrStat errStat, ReminderArray* ra, void** status) {
 			break;
 		case 3:
 			printf("invalid date\n");
+			break;
+		case 4:
+			printf("%s flag does not exist\n", *status);
+			free(*status);
+			break;
+		case 5:
+			printf("invalid time (do not forget to add am/pm indicator)\n");
+			break;
+		case 6:
+			printf("%s flag entered, but no subsequent argument specified\n", *status);
+			free(*status);
+			break;
+		case 7:
+			printf("Error opening file\n");
+			break;
+		case 8:
 			break;
 	}
 	freeReminderArray(ra);
@@ -358,25 +428,26 @@ int main(int argc, char** argv) {
 		ErrStat errStat;
 
 		if (strcmp("add", argv[1]) == 0) {
-					errHandle(parseArgsAddReminder(argc, argv, status), &remindersList, status);
-					printf("errstat: %d\n", errStat);
+					errHandle(parseArgsAddReminder(argc, argv, &remindersList, status), &remindersList, status);
+					//printf("errstat: %d\n", errStat);
 					//printf("status: %s\n", status);
 					//printf("task add\n");
-					addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
-					addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
-					addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
+					//addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
+					//addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
+					//addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
-						printf("Error opening file.\n");
+						errHandle(EFILE, &remindersList, status);
 						exit(1);
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
+					errHandle(EOKFINAL, &remindersList, status);
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					printf("task ls or task l\n");
 					fptr = fopen("./reminders_save_file.txt","r");
 					if (fptr == NULL) {
-						printf("Error opening file.\n");
+						errHandle(EFILE, &remindersList, status);
 						exit(1);
 					}
 					readFile(&remindersList, fptr);
@@ -391,6 +462,7 @@ int main(int argc, char** argv) {
 					}
 
 					fclose(fptr);
+					errHandle(EOKFINAL, &remindersList, status);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
 		} else if (strcmp("remove", argv[1]) == 0) {
