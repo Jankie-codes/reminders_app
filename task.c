@@ -43,6 +43,23 @@ typedef struct BST_ {
 	int* size;
 } BST;
 
+time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
+	struct tm value;
+  
+  value.tm_sec = 0;
+  value.tm_min = minutes;
+  value.tm_hour = hours;
+  value.tm_mday = day;
+  value.tm_mon = month;
+  value.tm_year = year;
+	value.tm_isdst = -1;
+
+	time_t* time_epoch = malloc(sizeof(time_t));
+	*time_epoch = mktime(&value);
+   
+	return time_epoch;
+}
+
 OptionalDateTime* mallocOptionalDateTime(time_t* value, bool valid) {
 	OptionalDateTime* newOptionalDateTime = malloc(sizeof(OptionalDateTime));
 	bool* pValid = malloc(sizeof(bool));
@@ -95,8 +112,6 @@ Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc) {
 	Reminder* reminderToMake = malloc(sizeof(Reminder));
 	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
 	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
-	//reminderToMake->message = message;
-	//reminderToMake->description = desc;
 	strcpy(reminderToMake->message, message);
 	strcpy(reminderToMake->description, desc);
 	reminderToMake->datetime = datetime;
@@ -105,7 +120,6 @@ Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc) {
 	
 	return reminderToMake;
 }
-
 
 void freeReminder(Reminder* r) {
 		free(r->message);
@@ -131,7 +145,10 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
   a->array[a->used++] = element;
 }
 
-
+void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
+	Reminder* reminderToAdd = makeReminder(message, datetime, desc);
+	addToReminderArray(reminders, reminderToAdd);
+}
 
 void freeReminderArray(ReminderArray* a) {
 	for (int i = 0; i < a->used; i++) {
@@ -151,14 +168,6 @@ void freeReminderArrayNotItems(ReminderArray* a) {
 	a->array = NULL;
 	a->used = a->size = 0;
 }
-
-void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
-	//printf("%d\n",reminderToAdd->id);
-	Reminder* reminderToAdd = makeReminder(message, datetime, desc);
-	addToReminderArray(reminders, reminderToAdd);
-}
-
-
 
 BST* initBST() {
 	BST* bst = malloc(sizeof(BST));
@@ -229,7 +238,6 @@ void printBST(BST* bst) {
 	}
 }
 
-
 void freeBST(BST* bst) {
 	freeReminder(bst->value);
 	free(bst->size);
@@ -252,32 +260,8 @@ bool strContains(char* str, char** strList) {
 	return false;
 }
 
-time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
-	struct tm value;
-  
-  value.tm_sec = 0;
-  value.tm_min = minutes;
-  value.tm_hour = hours;
-  value.tm_mday = day;
-  value.tm_mon = month;
-  value.tm_year = year;
-	value.tm_isdst = -1;
-
-	//printf("%d\n", value.tm_sec);
-	
-	time_t* time_epoch = malloc(sizeof(time_t));
-	*time_epoch = mktime(&value);
-   
-  //printf("Time and date: %s", ctime(time_epoch));
-	//printf("TIMEDATE POINTER: %p\n", time_epoch);
-
-	return time_epoch;
-}
-
 void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 		for (int i = 0; i < remindersList->used; i++) {
-			//printf("%d\n",i);
-			//fwrite(remindersList[i]->message, sizeof(char) * strlen(remindersList[i]->message), 1, fptr);
 			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
 			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->message));
 			fprintf(fptr, "%s\n", remindersList->array[i]->message);
@@ -298,9 +282,7 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 }
 
 void readFile(BST* remindersBST, FILE* fptr) {
-	//int acc = 0;
 	while (feof(fptr) == 0) {
-		//printf("ACC: %d\n", acc);
 		int id;
 		fscanf(fptr, "%d\n", &id);
 		int messageLen;
@@ -333,8 +315,6 @@ void readFile(BST* remindersBST, FILE* fptr) {
 		
 		Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc);
 		addToBST(remindersBST, reminderToAdd);
-		//addReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc, remindersList);
-		//acc++;
 	}
 /*
 	printf("%d\n", id);
