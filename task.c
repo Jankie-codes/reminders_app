@@ -439,7 +439,7 @@ ErrStat setTimeField(char* timeArg, int* fieldsList) {
 	return EOK;
 }
 
-ErrStat parseArgsAddReminder(int argc, char** argv, ReminderArray* ra, void** status) {
+ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
 	char* message = argv[2];
 	#define dateFieldsSize 5
 	int dateFields[dateFieldsSize]; //month day years hours minutes
@@ -519,7 +519,9 @@ ErrStat parseArgsAddReminder(int argc, char** argv, ReminderArray* ra, void** st
 		return EBADARGS;
 	}
 
-	addReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description, ra);
+	Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description);
+
+	addToBST(bst, reminderToAdd);
 
 	return EOK;
 }
@@ -557,7 +559,7 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 		case 8:
 			break;
 	}
-	bstToArray(bst, ra);
+	//bstToArray(bst, ra);
 	freeBST(bst);
 	freeReminderArrayNotItems(ra);
 	free(status);
@@ -574,7 +576,8 @@ int main(int argc, char** argv) {
 		ErrStat errStat;
 
 		if (strcmp("add", argv[1]) == 0) {
-					errHandle(parseArgsAddReminder(argc, argv, &remindersList, status), &remindersList, remindersBST, status);
+					errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
+					bstToArray(remindersBST, &remindersList);
 					//printf("errstat: %d\n", errStat);
 					//printf("status: %s\n", status);
 					//printf("task add\n");
