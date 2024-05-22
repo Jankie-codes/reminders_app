@@ -43,62 +43,20 @@ typedef struct BST_ {
 	int* size;
 } BST;
 
-/*
-
-BST* initBST() {
-	BST* bst = malloc(sizeof(BST));
-	bst->size = malloc(sizeof(int));
-	*(bst->size) = 0;
-	bst->left = NULL;
-	bst->right = NULL;
-	bst->value = NULL;
-	return bst;
+OptionalDateTime* mallocOptionalDateTime(time_t* value, bool valid) {
+	OptionalDateTime* newOptionalDateTime = malloc(sizeof(OptionalDateTime));
+	bool* pValid = malloc(sizeof(bool));
+	*pValid = valid;
+	newOptionalDateTime->value = value;
+	newOptionalDateTime->valid = pValid;
+	return newOptionalDateTime;
 }
 
-void addToBST(BST* bst, Reminder* reminderToAdd) {
-	(*bst->size)++;
-
-	if (!bst->value) {
-		bst->value = reminderToAdd;
-		return;
-	}
-
-	if (reminderToAdd <= *(bst->value)) {
-		if (!bst->left) {
-			BST* left = constructBST();
-			left->value = reminderToAdd;
-			(*left->size)++;
-			bst->left = left;
-			return;
-		} else {
-			addToBST(bst->left, reminderToAdd);
-		}
-	} else {
-		if (!bst->right) {
-			BST* right = constructBST();
-			right->value = reminderToAdd;
-			(*right->size)++;
-			bst->right = right;
-			return;
-		} else {
-			addToBST(bst->right, value);
-		}
-	}
+void freeOptionalDateTime(OptionalDateTime* odt) {
+	free(odt->value);
+	free(odt->valid);
+	free(odt);
 }
-
-void freeBST(BST* bst) {
-	free(bst->value);
-	free(bst->size);
-	if (bst->left != NULL) {
-		freeBST(bst->left);
-	}
-	if (bst->right != NULL) {
-		freeBST(bst->right);
-	}
-	free(bst);
-}
-
-*/
 
 int rmdCmp(Reminder* a, Reminder* b) {
 	if (*a->datetime->valid && *b->datetime->valid) {
@@ -133,29 +91,28 @@ int rmdCmp(Reminder* a, Reminder* b) {
 	}
 }
 
-bool strContains(char* str, char** strList) {
-	int len = sizeof(strList)/sizeof(strList[0]);
-	for(int i = 0; i < len; i++) {
- 	   if(strcmp(strList[i], str) == 0) {
-  	      return true;
-    	}
-	}
-	return false;
+Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
+	Reminder* reminderToMake = malloc(sizeof(Reminder));
+	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
+	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
+	//reminderToMake->message = message;
+	//reminderToMake->description = desc;
+	strcpy(reminderToMake->message, message);
+	strcpy(reminderToMake->description, desc);
+	reminderToMake->datetime = datetime;
+	reminderToMake->id = malloc(sizeof(int));
+	*(reminderToMake->id) = 1;
+	
+	return reminderToMake;
 }
 
-OptionalDateTime* mallocOptionalDateTime(time_t* value, bool valid) {
-	OptionalDateTime* newOptionalDateTime = malloc(sizeof(OptionalDateTime));
-	bool* pValid = malloc(sizeof(bool));
-	*pValid = valid;
-	newOptionalDateTime->value = value;
-	newOptionalDateTime->valid = pValid;
-	return newOptionalDateTime;
-}
 
-void freeOptionalDateTime(OptionalDateTime* odt) {
-	free(odt->value);
-	free(odt->valid);
-	free(odt);
+void freeReminder(Reminder* r) {
+		free(r->message);
+		free(r->description);
+		freeOptionalDateTime(r->datetime);
+		free(r->id);
+		free(r);
 }
 
 void initReminderArray(ReminderArray* a, size_t initialSize) {
@@ -174,13 +131,11 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
   a->array[a->used++] = element;
 }
 
+
+
 void freeReminderArray(ReminderArray* a) {
 	for (int i = 0; i < a->used; i++) {
-		free(a->array[i]->message);
-		free(a->array[i]->description);
-		freeOptionalDateTime(a->array[i]->datetime);
-		free(a->array[i]->id);
-		free(a->array[i]);
+		freeReminder(a->array[i]);
 	}
 
   free(a->array);
@@ -188,25 +143,104 @@ void freeReminderArray(ReminderArray* a) {
   a->used = a->size = 0;
 }
 
-Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
-	Reminder* reminderToMake = malloc(sizeof(Reminder));
-	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
-	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
-	//reminderToMake->message = message;
-	//reminderToMake->description = desc;
-	strcpy(reminderToMake->message, message);
-	strcpy(reminderToMake->description, desc);
-	reminderToMake->datetime = datetime;
-	reminderToMake->id = malloc(sizeof(int));
-	*(reminderToMake->id) = 1;
-	
-	return reminderToMake;
-}
-
 void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
 	//printf("%d\n",reminderToAdd->id);
 	Reminder* reminderToAdd = makeReminder(message, datetime, desc, reminders);
 	addToReminderArray(reminders, reminderToAdd);
+}
+
+
+
+BST* initBST() {
+	BST* bst = malloc(sizeof(BST));
+	bst->size = malloc(sizeof(int));
+	*(bst->size) = 0;
+	bst->left = NULL;
+	bst->right = NULL;
+	bst->value = NULL;
+	return bst;
+}
+
+void addToBST(BST* bst, Reminder* reminderToAdd) {
+	(*bst->size)++;
+
+	if (!bst->value) {
+		bst->value = reminderToAdd;
+		return;
+	}
+
+	if (rmdCmp(reminderToAdd, bst->value) <= 0) {
+		if (!bst->left) {
+			BST* left = initBST();
+			left->value = reminderToAdd;
+			(*left->size)++;
+			bst->left = left;
+			return;
+		} else {
+			addToBST(bst->left, reminderToAdd);
+		}
+	} else {
+		if (!bst->right) {
+			BST* right = initBST();
+			right->value = reminderToAdd;
+			(*right->size)++;
+			bst->right = right;
+			return;
+		} else {
+			addToBST(bst->right, reminderToAdd);
+		}
+	}
+}
+
+void bstToArray(BST* bst, ReminderArray* ra) {
+	if (!bst) {
+		return;
+	}
+	if (bst->right) {
+		bstToArray(bst->right, ra);
+		addToReminderArray(ra, bst->value);
+		bstToArray(bst->left, ra);
+	} else {
+		addToReminderArray(ra, bst->value);
+		bstToArray(bst->left, ra);
+	}
+}
+
+void printBST(BST* bst) {
+	if (!bst) {
+		return;
+	}
+	if (bst->right) {
+		printBST(bst->right);
+		printf("%s\n", bst->value->description);
+		printBST(bst->left);
+	} else {
+		printf("%s\n", bst->value->description);
+		printBST(bst->left);
+	}
+}
+
+
+void freeBST(BST* bst) {
+	freeReminder(bst->value);
+	free(bst->size);
+	if (bst->left != NULL) {
+		freeBST(bst->left);
+	}
+	if (bst->right != NULL) {
+		freeBST(bst->right);
+	}
+	free(bst);
+}
+
+bool strContains(char* str, char** strList) {
+	int len = sizeof(strList)/sizeof(strList[0]);
+	for(int i = 0; i < len; i++) {
+ 	   if(strcmp(strList[i], str) == 0) {
+  	      return true;
+    	}
+	}
+	return false;
 }
 
 time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
@@ -558,12 +592,40 @@ int main(int argc, char** argv) {
 							printf("END OF REMINDER\n");
 					}*/
 					
-					//Reminder* reminder1 = makeReminder("Aamessage", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), true), "description", NULL);
-					//Reminder* reminder2 = makeReminder("Aamessage", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), true), "description", NULL);
 					
+					Reminder* reminder1 = makeReminder("Aamessage", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), true), "description1", NULL);
+					Reminder* reminder2 = makeReminder("Aamessage", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), true), "description2", NULL);
+					Reminder* reminder3 = makeReminder("hi", mallocOptionalDateTime(newDateTime(5, 25, 122, 12, 0), true), "urgentmore", NULL);
+					Reminder* reminder4 = makeReminder("hi", mallocOptionalDateTime(newDateTime(5, 25, 122, 12, 0), false), "nodate", NULL);
+					Reminder* reminder5 = makeReminder("hi2", mallocOptionalDateTime(newDateTime(5, 25, 122, 12, 0), false), "nodate2", NULL);
+
+					
+					BST* bst = initBST();
+
+					addToBST(bst, reminder1);
+					addToBST(bst, reminder2);
+					addToBST(bst, reminder3);
+					addToBST(bst, reminder4);
+					addToBST(bst, reminder5);
+
+					bstToArray(bst, &remindersList);
+
+					for (int i = 0; i < remindersList.used; i++) {
+							printf("i = %d\n", i);
+							printf("%s\n", remindersList.array[i]->message);
+							printf("%s\n", remindersList.array[i]->description);
+							printf("datetime valid or not: %d\n", *(remindersList.array[i]->datetime->valid));
+							printf("%s", ctime(remindersList.array[i]->datetime->value));
+							//printf("%d\n", remindersList.array[i]->id);
+							printf("%d\n", *(remindersList.array[i]->id));
+							printf("END OF REMINDER\n");
+					}
+
+					freeBST(bst);
 					//printf("reminder1: %s\n", ctime(reminder1->datetime->value));
 
-					printf("rmdCmp: %d\n", rmdCmp(reminder1, reminder2));
+					//printf("rmdCmp: %d\n", rmdCmp(reminder1, reminder2));
+					
 
 					fclose(fptr);
 					errHandle(EOKFINAL, &remindersList, status);
