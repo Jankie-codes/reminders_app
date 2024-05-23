@@ -34,6 +34,7 @@ typedef struct ReminderArray {
 	Reminder** array;
 	size_t used;
 	size_t size;
+	int nextId;
 } ReminderArray;
 
 typedef struct BST_ {
@@ -133,6 +134,7 @@ void initReminderArray(ReminderArray* a, size_t initialSize) {
   a->array = malloc(initialSize * sizeof(Reminder));
   a->used = 0;
   a->size = initialSize;
+	a->nextId = 1;
 }
 
 void addToReminderArray(ReminderArray* a, Reminder* element) {
@@ -143,6 +145,8 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
     a->array = realloc(a->array, a->size * sizeof(Reminder));
   }
   a->array[a->used++] = element;
+	(*element->id) = a->nextId;
+	a->nextId++;
 }
 
 void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
