@@ -211,7 +211,7 @@ void addToBST(BST* bst, Reminder* reminderToAdd) {
 }
 
 void bstToArray(BST* bst, ReminderArray* ra) {
-	if (!bst) {
+	if ((!bst) || (!bst->value)) {
 		return;
 	}
 	if (bst->right) {
@@ -239,7 +239,9 @@ void printBST(BST* bst) {
 }
 
 void freeBST(BST* bst) {
-	freeReminder(bst->value);
+	if (bst->value) {
+		freeReminder(bst->value);
+	}
 	free(bst->size);
 	if (bst->left != NULL) {
 		freeBST(bst->left);
@@ -261,6 +263,7 @@ bool strContains(char* str, char** strList) {
 }
 
 void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
+		//fprintf(fptr, "BEGIN-SAVE-FILE:\n");
 		for (int i = 0; i < remindersList->used; i++) {
 			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
 			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->message));
@@ -279,12 +282,19 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 				fprintf(fptr, "0 0 0 0 0\n");
 			}
 		}
+		fprintf(fptr, "-1\n");
+		fprintf(fptr, "NO-READ-PAST-THIS-POINT\n");
 }
 
 void readFile(BST* remindersBST, FILE* fptr) {
+	//fscanf(fptr, "%s\n", NULL);
 	while (feof(fptr) == 0) {
 		int id;
 		fscanf(fptr, "%d\n", &id);
+
+		if (id == -1) {
+			break;
+		}
 		int messageLen;
 		fscanf(fptr, "%d\n", &messageLen);
 		messageLen++; //increments the string length to account for the null character at the end when reading
@@ -315,19 +325,20 @@ void readFile(BST* remindersBST, FILE* fptr) {
 		
 		Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc);
 		addToBST(remindersBST, reminderToAdd);
-	}
-/*
-	printf("%d\n", id);
-	printf("%d\n", messageLen);
-	printf("%s\n", message);
-	printf("%d\n", descLen);
-	printf("%s\n", desc);
+	
+		/*
+		printf("id: %d\n", id);
+		printf("messagelen: %d\n", messageLen);
+		printf("message: %s\n", message);
+		printf("descLen: %d\n", descLen);
+		printf("desc: %s\n", desc);
 
-	printf("%d\n", month);
-	printf("%d\n", day);
-	printf("%d\n", year);
-	printf("%d\n", hours);
-	printf("%d\n", minutes);*/
+		printf("month: %d\n", month);
+		printf("day: %d\n", day);
+		printf("year: %d\n", year);
+		printf("hours: %d\n", hours);
+		printf("minutes: %d\n", minutes);*/
+	}
 }
 
 int wdayStrToInt(char* wdayStr) {
@@ -556,19 +567,36 @@ int main(int argc, char** argv) {
 		ErrStat errStat;
 
 		if (strcmp("add", argv[1]) == 0) {
-					errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
-					bstToArray(remindersBST, &remindersList);
+					//errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
+					//bstToArray(remindersBST, &remindersList);
+
+
 					//printf("errstat: %d\n", errStat);
 					//printf("status: %s\n", status);
 					//printf("task add\n");
 					//addReminder("samplmessage with spaces", mallocOptionalDateTime(newDateTime(5, 25, 123, 12, 0), false), "sample description.", &remindersList);
 					//addReminder("second reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), true), "second desc", &remindersList);
 					//addReminder("third reminder", mallocOptionalDateTime(newDateTime(3,27,124,12,0), false), "third sec", &remindersList);
+					fptr = fopen("./reminders_save_file.txt","r");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+
+					readFile(remindersBST, fptr); //comment and uncomment this one
+					fclose(fptr);
+
+					//printf("here\n");
+					errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
+					//printf("here\n");
+					bstToArray(remindersBST, &remindersList);
+
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
 						errHandle(EFILE, &remindersList, remindersBST, status);
 						exit(1);
 					}
+
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
 					errHandle(EOKFINAL, &remindersList, remindersBST, status);
@@ -622,7 +650,6 @@ int main(int argc, char** argv) {
 
 					//printf("rmdCmp: %d\n", rmdCmp(reminder1, reminder2));
 					
-
 					fclose(fptr);
 					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("edit", argv[1]) == 0) {
