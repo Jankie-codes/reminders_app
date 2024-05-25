@@ -561,6 +561,46 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 	exit(1);
 }
 
+ErrStat printReminders(ReminderArray* ra) { //TODO HERE
+	printf("--------------------------------------------------------------------------------------------------------------------------------------------\n"
+						"\t%s\t%-8s\t%-7s\t\t%-50s\t\t%-20s\t\n"
+						"--------------------------------------------------------------------------------------------------------------------------------------------\n", "id", "date", "time", "description", "note");
+
+	for (int i = 0; i < ra->used; i++) {
+		int id;
+		bool datetimeValid;
+		struct tm* datetime;
+		char* message;
+		char* description;
+		char dateString[9];
+		char timeString[9];
+
+		id = *(ra->array[i]->id);
+		datetimeValid = *ra->array[i]->datetime->valid;
+		if (datetimeValid) {
+			datetime = localtime(ra->array[i]->datetime->value);
+			//memcpy(&datetime, localtime(ra->array[i]->datetime->value), sizeof(struct tm));
+			strftime(dateString, 9, "%m/%d/%y", datetime); //watch out maxSize character limit could cause bugs
+			strftime(timeString, 9, "%I:%M%p", datetime);
+		} else {
+			strcpy(dateString, "N/A");
+			strcpy(timeString, "N/A");
+		}
+
+		message = ra->array[i]->message;
+		description = ra->array[i]->description;
+
+		/*printf("id: %d\n", id);
+		printf("datetimeValid: %d\n", datetimeValid);
+		
+		printf("message: %s\n", message);
+		printf("description: %s\n", description);*/
+
+		printf("\t%d\t%-8s\t%-7s\t\t%-50s\t\t%-20s\t\n", id, dateString, timeString, message, description);
+	}
+	return EOK;
+}
+
 int main(int argc, char** argv) {
 		FILE* fptr;
 		ReminderArray remindersList;
@@ -612,6 +652,7 @@ int main(int argc, char** argv) {
 						exit(1);
 					}
 					readFile(remindersBST, fptr);
+					fclose(fptr);
 					/*for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
@@ -640,7 +681,8 @@ int main(int argc, char** argv) {
 					*/
 					bstToArray(remindersBST, &remindersList);
 
-					for (int i = 0; i < remindersList.used; i++) {
+					printReminders(&remindersList);
+					/*for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
 							printf("datetime valid or not: %d\n", *(remindersList.array[i]->datetime->valid));
@@ -648,13 +690,11 @@ int main(int argc, char** argv) {
 							//printf("%d\n", remindersList.array[i]->id);
 							printf("%d\n", *(remindersList.array[i]->id));
 							printf("END OF REMINDER\n");
-					}
+					}*/
 
 					//printf("reminder1: %s\n", ctime(reminder1->datetime->value));
 
 					//printf("rmdCmp: %d\n", rmdCmp(reminder1, reminder2));
-					
-					fclose(fptr);
 					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
