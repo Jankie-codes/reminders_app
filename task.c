@@ -394,6 +394,7 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					}
 					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
 					idFound = true;
+					freeReminder(reminderToAdd);
 				} else {
 					addToBST(remindersBST, reminderToAdd);
 				}
@@ -416,28 +417,17 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					}
 					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
 					idFound = true;
+					freeReminder(reminderToAdd);
 				} else {
 					addToBST(remindersBST, reminderToAdd);
 				}
 				break;
 			}
 		}
-	
-		/*
-		printf("id: %d\n", id);
-		printf("messagelen: %d\n", messageLen);
-		printf("message: %s\n", message);
-		printf("descLen: %d\n", descLen);
-		printf("desc: %s\n", desc);
-
-		printf("month: %d\n", month);
-		printf("day: %d\n", day);
-		printf("year: %d\n", year);
-		printf("hours: %d\n", hours);
-		printf("minutes: %d\n", minutes);*/
 	}
-	if (mode == 1) {
+	if (mode == 1 || mode == 2) {
 		if (!idFound) {
+			fclose(fptr);
 			return EIDNOTFOUND;
 		}
 	}
@@ -762,13 +752,17 @@ ErrStat parseArgsRemoveReminder(int argc, char** argv) {
 	regcomp(&regex, "^[0-9]+$", REG_EXTENDED);
 	
 	if (argc < 3) {
+		regfree(&regex);
 		return ENOID;
 	} else if (argc > 3) {
+		regfree(&regex);
 		return ETOOMANYARGS;
 	}
 	if (regexec(&regex, argv[2], 0, NULL, 0) != 0) {
+		regfree(&regex);
 		return EBADID;
 	}
+	regfree(&regex);
 	return EOK;
 }
 
@@ -894,6 +888,7 @@ int main(int argc, char** argv) {
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
+					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("complete", argv[1]) == 0) {
 					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
 					int idToRemove = atoi(argv[2]);
@@ -917,6 +912,7 @@ int main(int argc, char** argv) {
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
+					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("undo", argv[1]) == 0) {
 					printf("task undo\n");
 		} else if (strcmp("redo", argv[1])== 0) {
