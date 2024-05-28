@@ -377,7 +377,7 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 				//add everything to BST
 				addToBST(remindersBST, reminderToAdd);
 				break;
-			case 1:
+			case 1: {
 				int** ppIdToRemove= (int**) info;
 				int idToRemove = **ppIdToRemove;
 				char dateString[19];
@@ -394,10 +394,33 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					}
 					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
 					idFound = true;
-					break;
 				} else {
 					addToBST(remindersBST, reminderToAdd);
 				}
+				break;
+			}
+			case 2: {
+				int** ppIdToRemove= (int**) info;
+				int idToRemove = **ppIdToRemove;
+				char dateString[19];
+				char timeString[8];
+				if (valid) {
+					intsToDateString(dateString, month, day, year);
+					intsToTimeString(timeString, hours, minutes);
+				}
+				if (idToRemove == id) {
+					if (!valid) {
+						printf("COMPLETED reminder \"%s\" with no date\n", message);
+					} else {
+						printf("COMPLETED reminder \"%s\" set to %s %s\n", message, dateString, timeString);
+					}
+					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
+					idFound = true;
+				} else {
+					addToBST(remindersBST, reminderToAdd);
+				}
+				break;
+			}
 		}
 	
 		/*
@@ -860,6 +883,29 @@ int main(int argc, char** argv) {
 						exit(1);
 					}
 					errHandle(readFile(remindersBST, fptr, 1, (void**)ppIdToRemove), &remindersList, remindersBST, status);
+					fclose(fptr);
+
+					bstToArray(remindersBST, &remindersList);
+
+					fptr = fopen("./reminders_save_file.txt", "w");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+					rewriteFile(&remindersList, fptr);
+					fclose(fptr);
+		} else if (strcmp("complete", argv[1]) == 0) {
+					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
+					int idToRemove = atoi(argv[2]);
+					int* pIdToRemove = &idToRemove;
+					int** ppIdToRemove = &pIdToRemove;
+
+					fptr = fopen("./reminders_save_file.txt","r");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+					errHandle(readFile(remindersBST, fptr, 2, (void**)ppIdToRemove), &remindersList, remindersBST, status);
 					fclose(fptr);
 
 					bstToArray(remindersBST, &remindersList);
