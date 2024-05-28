@@ -44,6 +44,14 @@ typedef struct BST_ {
 	int* size;
 } BST;
 
+int min(int a, int b) {
+	if (b < a) {
+		return b;
+	} else {
+		return a;
+	}
+}
+
 time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 	struct tm value;
   
@@ -561,10 +569,22 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 	exit(1);
 }
 
-ErrStat printReminders(ReminderArray* ra) { //TODO HERE
+bool checkIfAllMlfPrinted(char* mlf[], int numMlf, int indices[]) {
+	for (int i = 0; i < numMlf; i++) {
+			if (indices[i] <= strlen(mlf[i])) {
+				return true;
+			}
+	}
+	return false;
+}
+
+ErrStat printReminders(ReminderArray* ra) {
+	#define maxMessage 50
+	#define maxDescription 20
+	#define numMultilineFields 2
 	printf("--------------------------------------------------------------------------------------------------------------------------------------------\n"
-						"\t%s\t%-8s\t%-7s\t\t%-50s\t\t%-20s\t\n"
-						"--------------------------------------------------------------------------------------------------------------------------------------------\n", "id", "date", "time", "description", "note");
+						"\t%s\t%-8s\t%-7s\t\t%-*s\t\t%-*s\t\n"
+						"--------------------------------------------------------------------------------------------------------------------------------------------\n", "id", "date", "time", maxMessage, "description", maxDescription, "note");
 
 	for (int i = 0; i < ra->used; i++) {
 		int id;
@@ -574,6 +594,11 @@ ErrStat printReminders(ReminderArray* ra) { //TODO HERE
 		char* description;
 		char dateString[9];
 		char timeString[9];
+
+		char* multilineFields[numMultilineFields] = {ra->array[i]->message, ra->array[i]->description};
+		char mlfLinesToPrint[numMultilineFields][50]; //message and description
+		int mlfCharLimits[numMultilineFields] = {maxMessage, maxDescription};
+		int mlfIndices[numMultilineFields] = {0, 0};
 
 		id = *(ra->array[i]->id);
 		datetimeValid = *ra->array[i]->datetime->valid;
@@ -586,17 +611,45 @@ ErrStat printReminders(ReminderArray* ra) { //TODO HERE
 			strcpy(dateString, "N/A");
 			strcpy(timeString, "N/A");
 		}
-
+		
 		message = ra->array[i]->message;
 		description = ra->array[i]->description;
 
-		/*printf("id: %d\n", id);
-		printf("datetimeValid: %d\n", datetimeValid);
-		
-		printf("message: %s\n", message);
-		printf("description: %s\n", description);*/
+		//ATTEMPTED DRY CODE
+		for (int i = 0; i < numMultilineFields; i++) {
+			if (strlen(multilineFields[i]) > mlfCharLimits[i]) {
+				int lineLength = min((strlen(multilineFields[i]) - mlfIndices[i]), mlfCharLimits[i]);
+				strncpy(mlfLinesToPrint[i], (multilineFields[i])+(mlfIndices[i]), lineLength);
+				(mlfLinesToPrint[i])[lineLength] = '\0';
+				//printf("%d\n", min((strlen(message) - messageIndex), maxMessage));
+				//printf("message: %s\n", messageLine);
+				//messageIndex += maxMessage;
+				mlfIndices[i] += mlfCharLimits[i];
+			} else {
+				strcpy(mlfLinesToPrint[i], multilineFields[i]);
+				mlfIndices[i] = mlfCharLimits[i] + 1;
+			}
+		}
 
-		printf("\t%d\t%-8s\t%-7s\t\t%-50s\t\t%-20s\t\n", id, dateString, timeString, message, description);
+		printf("\t%d\t%-8s\t%-7s\t\t%-*s\t\t%-*s\t\n", id, dateString, timeString, mlfCharLimits[0], mlfLinesToPrint[0], mlfCharLimits[1], mlfLinesToPrint[1]);
+
+		bool mlfIncomplete = checkIfAllMlfPrinted(multilineFields, numMultilineFields, mlfIndices);
+
+		while (mlfIncomplete) {
+			for (int i = 0; i < numMultilineFields; i++) {
+				if (mlfIndices[i] <= strlen(multilineFields[i])) {
+					int lineLength = min((strlen(multilineFields[i]) - mlfIndices[i]), mlfCharLimits[i]);
+					strncpy(mlfLinesToPrint[i], (multilineFields[i])+(mlfIndices[i]), lineLength);
+					(mlfLinesToPrint[i])[lineLength] = '\0';
+					mlfIndices[i] += mlfCharLimits[i];
+				} else {
+					strcpy(mlfLinesToPrint[i], "");
+				}
+			}
+			mlfIncomplete = checkIfAllMlfPrinted(multilineFields, numMultilineFields, mlfIndices);
+		
+			printf("\t%-1s\t%-8s\t%-7s\t\t%-*s\t\t%-*s\t\n", "", " ", " ", mlfCharLimits[0], mlfLinesToPrint[0], mlfCharLimits[1], mlfLinesToPrint[1]);
+		}
 	}
 	return EOK;
 }
@@ -682,7 +735,9 @@ int main(int argc, char** argv) {
 					bstToArray(remindersBST, &remindersList);
 
 					printReminders(&remindersList);
-					/*for (int i = 0; i < remindersList.used; i++) {
+					
+					/*
+					for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
 							printf("%s\n", remindersList.array[i]->description);
 							printf("datetime valid or not: %d\n", *(remindersList.array[i]->datetime->valid));
