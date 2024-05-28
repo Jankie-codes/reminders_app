@@ -16,6 +16,10 @@ typedef enum ErrStat {
 	EEMPFLAG,
 	EFILE,
 	EOKFINAL,
+	EBADID,
+	ENOID,
+	ETOOMANYARGS,
+	EIDNOTFOUND,
 } ErrStat;
 
 typedef struct OptionalDateTime {
@@ -50,6 +54,36 @@ int min(int a, int b) {
 	} else {
 		return a;
 	}
+}
+
+void intsToTimeString(char* stringToModify, int hours, int minutes) {
+	int realHours;
+	char minutesString[3] = "00";
+	char* amPm = "AM";
+
+	if (hours >= 12) {
+		amPm = "PM";
+	}
+	if (hours == 0) {
+		realHours = 12;
+	} else {
+		realHours = (hours % 12);
+		if (hours == 12) {
+			realHours = 12;
+		}
+	}
+	if (minutes < 10) {
+		sprintf(minutesString, "0%d", minutes);
+	} else {
+		sprintf(minutesString, "%d", minutes);
+	}
+	sprintf(stringToModify, "%d:%s%s", realHours, minutesString, amPm);
+}
+
+void intsToDateString(char* stringToModify, int month, int day, int year) {
+	int realYear = year + 1900;
+	char monthStrings[12][10] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
+	sprintf(stringToModify, "%s %d, %d", monthStrings[month], day, realYear);
 }
 
 time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
@@ -165,7 +199,6 @@ void addReminder(char* message, OptionalDateTime* datetime, char* desc, Reminder
 void freeReminderArray(ReminderArray* a) {
 	for (int i = 0; i < a->used; i++) {
 		if (a->array[i] != NULL) {
-			printf("i = %d\n", i);
 			freeReminder(a->array[i]);
 		}
 	}
@@ -298,7 +331,8 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 		fprintf(fptr, "NO-READ-PAST-THIS-POINT\n");
 }
 
-void readFile(BST* remindersBST, FILE* fptr) {
+ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
+	bool idFound = false;
 	//fscanf(fptr, "%s\n", NULL);
 	while (feof(fptr) == 0) {
 		int id;
@@ -335,8 +369,36 @@ void readFile(BST* remindersBST, FILE* fptr) {
 		fscanf(fptr, "%d ", &hours);
 		fscanf(fptr, "%d\n", &minutes);
 		
+		
 		Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc);
-		addToBST(remindersBST, reminderToAdd);
+
+		switch (mode) {
+			case 0:
+				//add everything to BST
+				addToBST(remindersBST, reminderToAdd);
+				break;
+			case 1:
+				int** ppIdToRemove= (int**) info;
+				int idToRemove = **ppIdToRemove;
+				char dateString[19];
+				char timeString[8];
+				if (valid) {
+					intsToDateString(dateString, month, day, year);
+					intsToTimeString(timeString, hours, minutes);
+				}
+				if (idToRemove == id) {
+					if (!valid) {
+						printf("Removed reminder \"%s\" with no date\n", message);
+					} else {
+						printf("Removed reminder \"%s\" set to %s %s\n", message, dateString, timeString);
+					}
+					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
+					idFound = true;
+					break;
+				} else {
+					addToBST(remindersBST, reminderToAdd);
+				}
+		}
 	
 		/*
 		printf("id: %d\n", id);
@@ -351,6 +413,13 @@ void readFile(BST* remindersBST, FILE* fptr) {
 		printf("hours: %d\n", hours);
 		printf("minutes: %d\n", minutes);*/
 	}
+	if (mode == 1) {
+		if (!idFound) {
+			return EIDNOTFOUND;
+		}
+	}
+
+	return EOK;
 }
 
 int wdayStrToInt(char* wdayStr) {
@@ -561,6 +630,18 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 			break;
 		case 8:
 			break;
+		case 9:
+			printf("Invalid ID specified. Please ensure that the reminder ID argument is a number\n");
+			break;
+		case 10: 
+			printf("No ID specified. Please specify a reminder ID for which reminder to remove\n");
+			break;
+		case 11:
+			printf("Too many arguments\n");
+			break;
+		case 12:
+			printf("Could not find a reminder with the given ID\n");
+			break;
 	}
 	//bstToArray(bst, ra);
 	freeBST(bst);
@@ -615,7 +696,6 @@ ErrStat printReminders(ReminderArray* ra) {
 		message = ra->array[i]->message;
 		description = ra->array[i]->description;
 
-		//ATTEMPTED DRY CODE
 		for (int i = 0; i < numMultilineFields; i++) {
 			if (strlen(multilineFields[i]) > mlfCharLimits[i]) {
 				int lineLength = min((strlen(multilineFields[i]) - mlfIndices[i]), mlfCharLimits[i]);
@@ -654,6 +734,21 @@ ErrStat printReminders(ReminderArray* ra) {
 	return EOK;
 }
 
+ErrStat parseArgsRemoveReminder(int argc, char** argv) {
+	regex_t regex;
+	regcomp(&regex, "^[0-9]+$", REG_EXTENDED);
+	
+	if (argc < 3) {
+		return ENOID;
+	} else if (argc > 3) {
+		return ETOOMANYARGS;
+	}
+	if (regexec(&regex, argv[2], 0, NULL, 0) != 0) {
+		return EBADID;
+	}
+	return EOK;
+}
+
 int main(int argc, char** argv) {
 		FILE* fptr;
 		ReminderArray remindersList;
@@ -662,7 +757,7 @@ int main(int argc, char** argv) {
 
 		void** status = malloc(sizeof(void*));
 		ErrStat errStat;
-
+		
 		if (strcmp("add", argv[1]) == 0) {
 					//errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
 					//bstToArray(remindersBST, &remindersList);
@@ -680,7 +775,7 @@ int main(int argc, char** argv) {
 						exit(1);
 					}
 
-					readFile(remindersBST, fptr); //comment and uncomment this one
+					readFile(remindersBST, fptr, 0, NULL); //comment and uncomment this one
 					fclose(fptr);
 
 					//printf("here\n");
@@ -704,7 +799,7 @@ int main(int argc, char** argv) {
 						errHandle(EFILE, &remindersList, remindersBST, status);
 						exit(1);
 					}
-					readFile(remindersBST, fptr);
+					readFile(remindersBST, fptr, 0, NULL);
 					fclose(fptr);
 					/*for (int i = 0; i < remindersList.used; i++) {
 							printf("%s\n", remindersList.array[i]->message);
@@ -754,7 +849,28 @@ int main(int argc, char** argv) {
 		} else if (strcmp("edit", argv[1]) == 0) {
 					printf("task edit\n");
 		} else if (strcmp("remove", argv[1]) == 0) {
-					printf("task remove\n");
+					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
+					int idToRemove = atoi(argv[2]);
+					int* pIdToRemove = &idToRemove;
+					int** ppIdToRemove = &pIdToRemove;
+
+					fptr = fopen("./reminders_save_file.txt","r");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+					errHandle(readFile(remindersBST, fptr, 1, (void**)ppIdToRemove), &remindersList, remindersBST, status);
+					fclose(fptr);
+
+					bstToArray(remindersBST, &remindersList);
+
+					fptr = fopen("./reminders_save_file.txt", "w");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+					rewriteFile(&remindersList, fptr);
+					fclose(fptr);
 		} else if (strcmp("undo", argv[1]) == 0) {
 					printf("task undo\n");
 		} else if (strcmp("redo", argv[1])== 0) {
