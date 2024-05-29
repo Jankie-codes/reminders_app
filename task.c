@@ -20,6 +20,8 @@ typedef enum ErrStat {
 	ENOID,
 	ETOOMANYARGS,
 	EIDNOTFOUND,
+	EBADCOMMAND,
+	ENOCOMMAND,
 } ErrStat;
 
 typedef struct OptionalDateTime {
@@ -655,6 +657,13 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 		case 12:
 			printf("Could not find a reminder with the given ID\n");
 			break;
+		case 13:
+			printf("Invalid command\n");
+			break;
+		case 14:
+			printf("A reminders app written in C. Create and complete reminders with ease.\n");
+			printf("No command entered. Please specify a command\n");
+			break;
 	}
 	//bstToArray(bst, ra);
 	freeBST(bst);
@@ -775,6 +784,10 @@ int main(int argc, char** argv) {
 		void** status = malloc(sizeof(void*));
 		ErrStat errStat;
 		
+		if (argc < 2) {
+			errHandle(ENOCOMMAND, &remindersList, remindersBST, status);
+		}
+
 		if (strcmp("add", argv[1]) == 0) {
 					//errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
 					//bstToArray(remindersBST, &remindersList);
@@ -913,11 +926,12 @@ int main(int argc, char** argv) {
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
 					errHandle(EOKFINAL, &remindersList, remindersBST, status);
-		} else if (strcmp("undo", argv[1]) == 0) {
+		}
+		/*} else if (strcmp("undo", argv[1]) == 0) {
 					printf("task undo\n");
 		} else if (strcmp("redo", argv[1])== 0) {
 					printf("task redo\n");
-		}
-		freeReminderArray(&remindersList);
+		}*/
+		errHandle(EBADCOMMAND, &remindersList, remindersBST, status);
 }
 
