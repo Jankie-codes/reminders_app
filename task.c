@@ -685,6 +685,7 @@ ErrStat printReminders(ReminderArray* ra) {
 	#define maxMessage 50
 	#define maxDescription 20
 	#define numMultilineFields 2
+	printf("\t\t\t\t\t\t\t\tMy Reminders\n");
 	printf("--------------------------------------------------------------------------------------------------------------------------------------------\n"
 						"\t%s\t%-8s\t%-7s\t\t%-*s\t\t%-*s\t\n"
 						"--------------------------------------------------------------------------------------------------------------------------------------------\n", "id", "date", "time", maxMessage, "description", maxDescription, "note");
@@ -753,6 +754,7 @@ ErrStat printReminders(ReminderArray* ra) {
 			printf("\t%-1s\t%-8s\t%-7s\t\t%-*s\t\t%-*s\t\n", "", " ", " ", mlfCharLimits[0], mlfLinesToPrint[0], mlfCharLimits[1], mlfLinesToPrint[1]);
 		}
 	}
+	printf("\n");
 	return EOK;
 }
 
