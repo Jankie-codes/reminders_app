@@ -5,8 +5,11 @@
 #include<stdbool.h>
 #include <time.h>
 #include<regex.h>
+#include"errstat.h"
+#include"reminders.h"
+#include"remfiles.h"
 
-typedef enum ErrStat {
+/*typedef enum ErrStat {
 	EOK = 0,
 	EBADARGS,
 	EDUPFLAG,
@@ -22,9 +25,9 @@ typedef enum ErrStat {
 	EIDNOTFOUND,
 	EBADCOMMAND,
 	ENOCOMMAND,
-} ErrStat;
+} ErrStat;*/
 
-typedef struct OptionalDateTime {
+/*typedef struct OptionalDateTime {
 	time_t* value;
 	bool* valid;
 } OptionalDateTime;
@@ -48,7 +51,7 @@ typedef struct BST_ {
 	struct BST_* left;
 	struct BST_* right;
 	int* size;
-} BST;
+} BST;*/
 
 int min(int a, int b) {
 	if (b < a) {
@@ -58,7 +61,7 @@ int min(int a, int b) {
 	}
 }
 
-void intsToTimeString(char* stringToModify, int hours, int minutes) {
+/*void intsToTimeString(char* stringToModify, int hours, int minutes) {
 	int realHours;
 	char minutesString[3] = "00";
 	char* amPm = "AM";
@@ -86,9 +89,9 @@ void intsToDateString(char* stringToModify, int month, int day, int year) {
 	int realYear = year + 1900;
 	char monthStrings[12][10] = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 	sprintf(stringToModify, "%s %d, %d", monthStrings[month], day, realYear);
-}
+}*/
 
-time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
+/*time_t* newDateTime(int month, int day, int year, int hours, int minutes) {
 	struct tm value;
   
   value.tm_sec = 0;
@@ -298,6 +301,7 @@ void freeBST(BST* bst) {
 	}
 	free(bst);
 }
+*/
 
 bool strContains(char* str, char** strList) {
 	int len = sizeof(strList)/sizeof(strList[0]);
@@ -309,7 +313,7 @@ bool strContains(char* str, char** strList) {
 	return false;
 }
 
-void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
+/*void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 		//fprintf(fptr, "BEGIN-SAVE-FILE:\n");
 		for (int i = 0; i < remindersList->used; i++) {
 			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
@@ -435,7 +439,7 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 	}
 
 	return EOK;
-}
+}*/
 
 int wdayStrToInt(char* wdayStr) {
 	#define daysSize 14
