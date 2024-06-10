@@ -4,3 +4,7 @@ a.out
 vgcore.48221
 vgcore.13929
 vgcore.300760
+notify
+task
+remfiles.o
+reminders.o
