@@ -11,6 +11,7 @@ typedef struct Reminder {
 	char* message;
 	char* description;
 	int* id;
+	bool* notified;
 } Reminder;
 
 typedef struct ReminderArray {
@@ -35,7 +36,7 @@ void freeOptionalDateTime(OptionalDateTime*);
 
 int rmdCmp(Reminder*, Reminder*);
 
-Reminder* makeReminder(char*, OptionalDateTime*, char*);
+Reminder* makeReminder(char*, OptionalDateTime*, char*, bool);
 
 void freeReminder(Reminder*);
 
@@ -43,7 +44,7 @@ void initReminderArray(ReminderArray*, size_t);
 
 void addToReminderArray(ReminderArray*, Reminder*);
 
-void addReminder(char*, OptionalDateTime*, char*, ReminderArray*);
+void addReminder(char*, OptionalDateTime*, char*, bool, ReminderArray*);
 
 void freeReminderArray(ReminderArray*);
 

@@ -610,7 +610,7 @@ ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
 		return EBADARGS;
 	}
 
-	Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description);
+	Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description, false);
 
 	addToBST(bst, reminderToAdd);
 

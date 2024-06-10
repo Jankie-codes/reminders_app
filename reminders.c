@@ -70,7 +70,7 @@ int rmdCmp(Reminder* a, Reminder* b) {
 	}
 }
 
-Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc) {
+Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc, bool notified) {
 	Reminder* reminderToMake = malloc(sizeof(Reminder));
 	reminderToMake->message = malloc(sizeof(char)*(1+strlen(message)));
 	reminderToMake->description = malloc(sizeof(char)*(1+strlen(desc)));
@@ -79,6 +79,8 @@ Reminder* makeReminder(char* message, OptionalDateTime* datetime, char* desc) {
 	reminderToMake->datetime = datetime;
 	reminderToMake->id = malloc(sizeof(int));
 	*(reminderToMake->id) = 1;
+	reminderToMake->notified = malloc(sizeof(bool));
+	*(reminderToMake->notified) = notified;
 	
 	return reminderToMake;
 }
@@ -88,6 +90,7 @@ void freeReminder(Reminder* r) {
 		free(r->description);
 		freeOptionalDateTime(r->datetime);
 		free(r->id);
+		free(r->notified);
 		free(r);
 }
 
@@ -110,8 +113,8 @@ void addToReminderArray(ReminderArray* a, Reminder* element) {
 	a->nextId++;
 }
 
-void addReminder(char* message, OptionalDateTime* datetime, char* desc, ReminderArray* reminders) {
-	Reminder* reminderToAdd = makeReminder(message, datetime, desc);
+void addReminder(char* message, OptionalDateTime* datetime, char* desc, bool notified, ReminderArray* reminders) {
+	Reminder* reminderToAdd = makeReminder(message, datetime, desc, notified);
 	addToReminderArray(reminders, reminderToAdd);
 }
 

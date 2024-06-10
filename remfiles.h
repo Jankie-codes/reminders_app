@@ -1,6 +1,8 @@
 #ifndef REMFILES_H
 #define REMFILES_H
 
+int system(const char*);
+
 void intsToTimeString(char*, int, int);
 
 void intsToDateString(char*, int, int, int);
