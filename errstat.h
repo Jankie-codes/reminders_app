@@ -17,6 +17,7 @@ typedef enum ErrStat {
 	EIDNOTFOUND,
 	EBADCOMMAND,
 	ENOCOMMAND,
+	ENOMESSAGE,
 } ErrStat;
 
 #endif

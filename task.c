@@ -530,23 +530,123 @@ ErrStat setTimeField(char* timeArg, int* fieldsList) {
 	return EOK;
 }
 
+ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int dateFieldsSize, bool* pValid, char** pDescription, char** pMessage, int mode) {
+	#define maxNumFlags 4
+	char flags[maxNumFlags][3] = {"-d", "-t", "-e", "-m"};
+	bool flagsSet[maxNumFlags] = {false, false, false, false};
+	char* recentFlag = "";
+
+	int numFlags = 3;
+	if (mode == 2) {
+		numFlags = 4;
+	}
+
+	for (int i = 3; i < argc; i++) {
+		if (strcmp("", recentFlag) == 0) {
+			recentFlag = argv[i];
+		} else if (strcmp(flags[0], recentFlag) == 0) {
+			recentFlag = "";
+			if (flagsSet[0]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[0]);
+				return EDUPFLAG;
+			}
+			for (int f = 0; f < (dateFieldsSize - 2); f++) {
+				ErrStat errStat = setDateField(argv[i], f, pDateFields);
+				if (errStat != 0) {
+					return errStat;
+				}
+			}
+			flagsSet[0] = true;
+		} else if (strcmp(flags[1], recentFlag) == 0) {
+			recentFlag = "";
+			if (flagsSet[1]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[1]);
+				return EDUPFLAG;
+			}
+			ErrStat errStat = setTimeField(argv[i], pDateFields);
+			if (errStat != 0) {
+				return errStat;
+			}
+			flagsSet[1] = true;
+		} else if (strcmp(flags[2], recentFlag) == 0) {
+			recentFlag = "";
+			if (flagsSet[2]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[2]);
+				return EDUPFLAG;
+			}
+			*pDescription = argv[i];
+			flagsSet[2] = true;
+		} else if ((strcmp(flags[3], recentFlag) == 0) && (mode == 2)) {
+			recentFlag = "";
+			if (flagsSet[3]) {
+				*status = malloc(sizeof(char)*3);
+				*status = strcpy(*status, flags[3]);
+				return EDUPFLAG;
+			}
+			*pMessage = argv[i];
+			flagsSet[3] = true;
+		} else {
+			printf("flagnotfound: %s\n", recentFlag);
+			return EBADARGS;
+		}
+	}
+	if (recentFlag[0] == '-') {
+		int flagLength = strlen(recentFlag);
+		flagLength++; //to account for null character \0
+		*status = malloc(sizeof(char) * flagLength);
+		*status = strcpy(*status, recentFlag);
+		
+		for (int i = 0; i < numFlags; i++) {
+			if (strcmp(recentFlag, flags[i]) == 0) {
+				if (flagsSet[i]) {
+					return EDUPFLAG;
+				} else {
+					return EEMPFLAG;
+				}
+			}
+		}
+		return EBADFLAG;
+		
+	} else if (!(strcmp("", recentFlag) == 0)) {
+		return EBADARGS;
+	}
+	
+	*pValid = (flagsSet[0] || flagsSet[1]);
+
+	return EOK;
+}
+
 ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
+	if (argc == 2) {
+		return ENOMESSAGE;
+	}
 	char* message = argv[2];
 	#define dateFieldsSize 5
 	int dateFields[dateFieldsSize]; //month day years hours minutes
 	int* pDateFields = dateFields;
 	char* description = "";
-	char* recentFlag = "";
+	char** pDescription = &description;
+	bool valid;
+	bool* pValid = &valid;
+	/*char* recentFlag = "";
 	#define numFlags 3
 	char flags[numFlags][3] = {"-d", "-t", "-e"};
-	bool flagsSet[3] = {false, false, false};
+	bool flagsSet[3] = {false, false, false};*/
 
 	for (int i = 0; i < (dateFieldsSize - 2); i++) { //datetime by default
 		setDateField("today", i, pDateFields);
 	}
 	setTimeField("12am", pDateFields);
+
+	ErrStat result = parseArgs(argc, argv, status, pDateFields, dateFieldsSize, pValid, pDescription, NULL, 1);
+	if (result != 0) {
+		return result;
+	}
 	
-	for (int i = 3; i < argc; i++) {
+	/*for (int i = 3; i < argc; i++) {
 		if (strcmp("", recentFlag) == 0) {
 			recentFlag = argv[i];
 		} else if (strcmp(flags[0], recentFlag) == 0) {
@@ -608,9 +708,9 @@ ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
 		
 	} else if (!(strcmp("", recentFlag) == 0)) {
 		return EBADARGS;
-	}
+	}*/
 
-	Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), (flagsSet[0] || flagsSet[1])), description, false);
+	Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]), *pValid), description, false);
 
 	addToBST(bst, reminderToAdd);
 
@@ -667,6 +767,9 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 		case 14:
 			printf("A reminders app written in C. Create and complete reminders with ease.\n");
 			printf("No command entered. Please specify a command\n");
+			break;
+		case 15:
+			printf("No message specified. Please specify a message for the reminder to add\n");
 			break;
 	}
 	//bstToArray(bst, ra);
