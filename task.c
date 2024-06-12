@@ -20,7 +20,7 @@
 	EFILE,
 	EOKFINAL,
 	EBADID,
-	ENOID,
+	ENOIDREMOVE,
 	ETOOMANYARGS,
 	EIDNOTFOUND,
 	EBADCOMMAND,
@@ -530,7 +530,7 @@ ErrStat setTimeField(char* timeArg, int* fieldsList) {
 	return EOK;
 }
 
-ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int dateFieldsSize, bool* pValid, char** pDescription, char** pMessage, int mode) {
+ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int dateFieldsSize, bool* pChangeValid, char** pDescription, char** pMessage, int mode) {
 	#define maxNumFlags 4
 	char flags[maxNumFlags][3] = {"-d", "-t", "-e", "-m"};
 	bool flagsSet[maxNumFlags] = {false, false, false, false};
@@ -550,6 +550,11 @@ ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int da
 				*status = malloc(sizeof(char)*3);
 				*status = strcpy(*status, flags[0]);
 				return EDUPFLAG;
+			}
+			if ((mode == 2) && (strcmp(argv[i], "none") == 0)) {
+				*pChangeValid = true;
+				flagsSet[0] = true;
+				continue;
 			}
 			for (int f = 0; f < (dateFieldsSize - 2); f++) {
 				ErrStat errStat = setDateField(argv[i], f, pDateFields);
@@ -614,9 +619,40 @@ ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int da
 		return EBADARGS;
 	}
 	
-	*pValid = (flagsSet[0] || flagsSet[1]);
+	switch (mode) {
+		case 1:
+			*pChangeValid = (flagsSet[0] || flagsSet[1]);
+			break;
+		case 2:
+			if ((*pChangeValid == true) && flagsSet[1])  {
+				return ETIMEOVERRIDDEN;
+			} else if (argc == 3) {
+				return ENOEDITFLAGS;
+			}
+			break;
+	} 
 
 	return EOK;
+}
+
+ErrStat parseArgsForEditing(int argc, char** argv, void** status, int* pDateFields, int dateFieldsSize, bool* pValid, char** pDescription, char** pMessage, int* pId) {
+	regex_t regex;
+	regcomp(&regex, "^[0-9]+$", REG_EXTENDED);
+
+	if (argc == 2) {
+		regfree(&regex);
+		return ENOIDEDIT;
+	}
+	if (regexec(&regex, argv[2], 0, NULL, 0) != 0) {
+		regfree(&regex);
+		return EBADID;
+	}
+
+	*pId = atoi(argv[2]);
+
+	ErrStat result = parseArgs(argc, argv, status, pDateFields, dateFieldsSize, pValid, pDescription, pMessage, 2);
+	regfree(&regex);
+	return result;
 }
 
 ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
@@ -771,6 +807,15 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 		case 15:
 			printf("No message specified. Please specify a message for the reminder to add\n");
 			break;
+		case 16:
+			printf("No ID specified. Please specify a reminder ID for which reminder to edit\n");
+			break;
+		case 17:
+			printf("WARNING: -d flag set to none, but -t flag was also specified. Overriding -t flag and simply removing both date and time\n");
+			return;
+		case 18:
+			printf("Please specify what part of the reminder to edit using flags\n");
+			break;
 	}
 	//bstToArray(bst, ra);
 	freeBST(bst);
@@ -871,7 +916,7 @@ ErrStat parseArgsRemoveReminder(int argc, char** argv) {
 	
 	if (argc < 3) {
 		regfree(&regex);
-		return ENOID;
+		return ENOIDREMOVE;
 	} else if (argc > 3) {
 		regfree(&regex);
 		return ETOOMANYARGS;
@@ -986,7 +1031,68 @@ int main(int argc, char** argv) {
 					//printf("rmdCmp: %d\n", rmdCmp(reminder1, reminder2));
 					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("edit", argv[1]) == 0) {
-					printf("task edit\n");
+					int id;
+					int* pId = &id;
+				
+					char* message = NULL;
+					char** pMessage = &message;
+
+					#define dateFieldsSize 5
+					int dateFields[dateFieldsSize] = {-1, -1, -1, -1, -1}; //month day years hours minutes
+					int* pDateFields = dateFields;
+
+					char* description = NULL;
+					char** pDescription = &description;
+
+					bool removeDate = false;
+					bool* pRemoveDate = &removeDate;
+
+					errHandle(parseArgsForEditing(argc, argv, status, pDateFields, dateFieldsSize, pRemoveDate, pDescription, pMessage, pId), &remindersList, remindersBST, status);
+
+					void* fieldsToEditArray[5];
+
+					void** fieldsToEdit = fieldsToEditArray;
+					fieldsToEdit[0] = (void*) pId;
+					fieldsToEdit[1] = (void*) message;
+					fieldsToEdit[2] = (void*) description;
+					fieldsToEdit[3] = (void*) pDateFields;
+					fieldsToEdit[4] = (void*) pRemoveDate;
+
+					/*if (message != NULL) {
+						printf("Message: %s\n", message);
+					}
+					if (dateFields[0] != -1) {
+						printf("Datefields: %d %d %d %d %d\n", dateFields[0], dateFields[1], dateFields[2], dateFields[3], dateFields[4]);
+					}
+					printf("Remove date: %d\n", removeDate);
+					if (description != NULL) {
+						printf("Description: %s\n", description);
+					}*/
+					
+					//printf("message1: %s\n", message);
+					//printf("message2: %s\n", (char*) fieldsToEdit[0]);
+
+					
+					fptr = fopen("./reminders_save_file.txt","r");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+					errHandle(readFile(remindersBST, fptr, 4, fieldsToEdit), &remindersList, remindersBST, status);
+					fclose(fptr);
+
+					bstToArray(remindersBST, &remindersList);
+					fptr = fopen("./reminders_save_file.txt","w");
+					if (fptr == NULL) {
+						errHandle(EFILE, &remindersList, remindersBST, status);
+						exit(1);
+					}
+
+					rewriteFile(&remindersList, fptr);
+					fclose(fptr);
+
+
+					errHandle(EOKFINAL, &remindersList, remindersBST, status);
 		} else if (strcmp("remove", argv[1]) == 0) {
 					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
 					int idToRemove = atoi(argv[2]);

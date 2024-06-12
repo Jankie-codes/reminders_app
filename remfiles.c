@@ -106,7 +106,6 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 		int notified;
 		fscanf(fptr, "%d\n", &notified);
 		//printf("idafter: %d\n", id);
-
 		
 		Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc, notified);
 		switch (mode) {
@@ -192,6 +191,56 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 				printf("%s\n%s\n%s\n%s\n", dateString, timeString, dateStringNow, timeStringNow);*/
 				addToBST(remindersBST, reminderToAdd);
 				free(reminderTime);	
+				break;
+			}
+			case 4: {
+				int idToEdit = *((int*) info[0]);
+				char* newMessage;
+				char* newDesc;
+				int* newDateArray;
+				bool removeDate;
+
+				if (idToEdit != id) {
+					addToBST(remindersBST, reminderToAdd);
+					break;
+				}
+
+				if (info[1]) {
+					newMessage = (char*) info[1];
+					reminderToAdd->message =  realloc(reminderToAdd->message, sizeof(char)*(1+strlen(newMessage)));
+					strcpy(reminderToAdd->message, newMessage);
+					//printf("newmessage: %s\n", reminderToAdd->message);
+				}
+				if (info[2]) {
+					newDesc = (char*) info[2];
+					reminderToAdd->description = realloc(reminderToAdd->description, sizeof(char)*(1+strlen(newDesc)));
+					strcpy(reminderToAdd->description, newDesc);
+					//printf("newDesc: %s\n", reminderToAdd->description);
+				} 
+				if (info[3]) {
+					newDateArray = (int*) info[3];
+					if (newDateArray[0] != -1) {
+						month = newDateArray[0];
+						day = newDateArray[1];
+						year = newDateArray[2];
+					}
+					if (newDateArray[3] != -1) {
+						hours = newDateArray[3];
+						minutes = newDateArray[4];
+					}
+					free(reminderToAdd->datetime->value);
+					reminderToAdd->datetime->value = newDateTime(month, day, year, hours, minutes);
+					*reminderToAdd->datetime->valid = true;
+					//printf("newDate: %d %d %d %d %d\n", newDateArray[0], newDateArray[1], newDateArray[2], newDateArray[3], newDateArray[4]);
+				}
+				if (info[4]) {
+					removeDate = *((bool*) info[4]);
+					*reminderToAdd->datetime->valid = false;
+					//printf("removeDate: %d\n", removeDate);
+				}
+
+				*reminderToAdd->notified = false;
+				addToBST(remindersBST, reminderToAdd);
 				break;
 			}
 		}
