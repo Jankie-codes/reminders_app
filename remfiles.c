@@ -219,6 +219,17 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 				} 
 				if (info[3]) {
 					newDateArray = (int*) info[3];
+					if ((newDateArray[0] != -1 || newDateArray[3] != -1) && !(*reminderToAdd->datetime->valid)) {
+						struct tm* pDate;
+						time_t now = time(0);
+						pDate = localtime(&now);	
+						month = pDate->tm_mon;
+						day = pDate->tm_mday;
+						year = pDate->tm_year;
+						hours = 0;
+						minutes = 0;
+						*reminderToAdd->datetime->valid = true;
+					}
 					if (newDateArray[0] != -1) {
 						month = newDateArray[0];
 						day = newDateArray[1];
@@ -230,22 +241,24 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					}
 					free(reminderToAdd->datetime->value);
 					reminderToAdd->datetime->value = newDateTime(month, day, year, hours, minutes);
-					*reminderToAdd->datetime->valid = true;
 					//printf("newDate: %d %d %d %d %d\n", newDateArray[0], newDateArray[1], newDateArray[2], newDateArray[3], newDateArray[4]);
 				}
 				if (info[4]) {
 					removeDate = *((bool*) info[4]);
-					*reminderToAdd->datetime->valid = false;
+					if (removeDate) {
+						*reminderToAdd->datetime->valid = false;
+					}
 					//printf("removeDate: %d\n", removeDate);
 				}
 
 				*reminderToAdd->notified = false;
 				addToBST(remindersBST, reminderToAdd);
+				idFound = true;
 				break;
 			}
 		}
 	}
-	if (mode == 1 || mode == 2) {
+	if (mode == 1 || mode == 2 || mode == 4) {
 		if (!idFound) {
 			fclose(fptr);
 			return EIDNOTFOUND;

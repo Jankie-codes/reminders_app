@@ -541,6 +541,13 @@ ErrStat parseArgs(int argc, char** argv, void** status, int* pDateFields, int da
 		numFlags = 4;
 	}
 
+	if (mode == 1) {
+		for (int i = 0; i < (dateFieldsSize - 2); i++) { //datetime by default
+			setDateField("today", i, pDateFields);
+		}
+		setTimeField("12am", pDateFields);
+	}
+
 	for (int i = 3; i < argc; i++) {
 		if (strcmp("", recentFlag) == 0) {
 			recentFlag = argv[i];
@@ -671,11 +678,6 @@ ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
 	#define numFlags 3
 	char flags[numFlags][3] = {"-d", "-t", "-e"};
 	bool flagsSet[3] = {false, false, false};*/
-
-	for (int i = 0; i < (dateFieldsSize - 2); i++) { //datetime by default
-		setDateField("today", i, pDateFields);
-	}
-	setTimeField("12am", pDateFields);
 
 	ErrStat result = parseArgs(argc, argv, status, pDateFields, dateFieldsSize, pValid, pDescription, NULL, 1);
 	if (result != 0) {
@@ -814,7 +816,7 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 			printf("WARNING: -d flag set to none, but -t flag was also specified. Overriding -t flag and simply removing both date and time\n");
 			return;
 		case 18:
-			printf("Please specify what part of the reminder to edit using flags\n");
+			printf("No edit flags specified\n");
 			break;
 	}
 	//bstToArray(bst, ra);
@@ -1082,6 +1084,10 @@ int main(int argc, char** argv) {
 					fclose(fptr);
 
 					bstToArray(remindersBST, &remindersList);
+
+					//printReminders(&remindersList);
+
+
 					fptr = fopen("./reminders_save_file.txt","w");
 					if (fptr == NULL) {
 						errHandle(EFILE, &remindersList, remindersBST, status);

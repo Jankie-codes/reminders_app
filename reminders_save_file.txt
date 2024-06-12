@@ -1,2 +1,2 @@
-24
-samplmessage with spaces
+-1
+NO-READ-PAST-THIS-POINT
