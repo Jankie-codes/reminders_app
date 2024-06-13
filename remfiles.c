@@ -3,8 +3,11 @@
 #include<stdbool.h>
 #include<stdlib.h>
 #include<string.h>
+#include <sys/stat.h>
 #include"errstat.h"
 #include"reminders.h"
+
+char* saveFilePath = "./reminders_save_file.txt";
 
 int system(const char* command);
 
@@ -38,8 +41,12 @@ void intsToDateString(char* stringToModify, int month, int day, int year) {
 	sprintf(stringToModify, "%s %d, %d", monthStrings[month], day, realYear);
 }
 
+void initFile(FILE* fptr) {
+	fprintf(fptr, "-1\n");
+	fprintf(fptr, "NO-READ-PAST-THIS-POINT\n");
+}
+
 void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
-		//fprintf(fptr, "BEGIN-SAVE-FILE:\n");
 		for (int i = 0; i < remindersList->used; i++) {
 			fprintf(fptr, "%d\n", *(remindersList->array[i]->id));
 			fprintf(fptr, "%d\n", strlen(remindersList->array[i]->message));
@@ -65,11 +72,9 @@ void rewriteFile(ReminderArray* remindersList, FILE* fptr) {
 
 ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 	bool idFound = false;
-	//fscanf(fptr, "%s\n", NULL);
 	while (feof(fptr) == 0) {
 		int id;
 		fscanf(fptr, "%d\n", &id);
-		//printf("id: %d\n", id);
 
 		if (id == -1) {
 			break;
@@ -102,10 +107,8 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 		fscanf(fptr, "%d ", &hours);
 		fscanf(fptr, "%d\n", &minutes);
 	
-		//printf("idbefore: %d\n", id);
 		int notified;
 		fscanf(fptr, "%d\n", &notified);
-		//printf("idafter: %d\n", id);
 		
 		Reminder* reminderToAdd = makeReminder(message, mallocOptionalDateTime(newDateTime(month, day, year, hours, minutes), valid), desc, notified);
 		switch (mode) {
@@ -122,14 +125,12 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					intsToDateString(dateString, month, day, year);
 					intsToTimeString(timeString, hours, minutes);
 				}
-				//printf("currentid: %d\n", id);
 				if (idToRemove == id) {
 					if (!valid) {
 						printf("Removed reminder \"%s\" with no date\n", message);
 					} else {
 						printf("Removed reminder \"%s\" set to %s %s\n", message, dateString, timeString);
 					}
-					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
 					idFound = true;
 					freeReminder(reminderToAdd);
 				} else {
@@ -152,7 +153,6 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					} else {
 						printf("COMPLETED reminder \"%s\" set to %s %s\n", message, dateString, timeString);
 					}
-					//printf("Date: %d %d %d %d %d\n", month, day, year, hours, minutes);
 					idFound = true;
 					freeReminder(reminderToAdd);
 				} else {
@@ -183,12 +183,6 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					*reminderToAdd->notified = true;
 				}
 
-				/*//printf("%d %d %d %d %d\n", tmNow->tm_mon, tmNow->tm_mday, tmNow->tm_year, tmNow->tm_hour, tmNow->tm_min);
-				intsToDateString(dateStringNow, tmNow->tm_mon, tmNow->tm_mday, tmNow->tm_year);
-				intsToTimeString(timeStringNow, tmNow->tm_hour, tmNow->tm_min);
-				intsToDateString(dateString, month, day, year);
-				intsToTimeString(timeString, hours, minutes);
-				printf("%s\n%s\n%s\n%s\n", dateString, timeString, dateStringNow, timeStringNow);*/
 				addToBST(remindersBST, reminderToAdd);
 				free(reminderTime);	
 				break;
@@ -209,13 +203,11 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					newMessage = (char*) info[1];
 					reminderToAdd->message =  realloc(reminderToAdd->message, sizeof(char)*(1+strlen(newMessage)));
 					strcpy(reminderToAdd->message, newMessage);
-					//printf("newmessage: %s\n", reminderToAdd->message);
 				}
 				if (info[2]) {
 					newDesc = (char*) info[2];
 					reminderToAdd->description = realloc(reminderToAdd->description, sizeof(char)*(1+strlen(newDesc)));
 					strcpy(reminderToAdd->description, newDesc);
-					//printf("newDesc: %s\n", reminderToAdd->description);
 				} 
 				if (info[3]) {
 					newDateArray = (int*) info[3];
@@ -241,14 +233,12 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 					}
 					free(reminderToAdd->datetime->value);
 					reminderToAdd->datetime->value = newDateTime(month, day, year, hours, minutes);
-					//printf("newDate: %d %d %d %d %d\n", newDateArray[0], newDateArray[1], newDateArray[2], newDateArray[3], newDateArray[4]);
 				}
 				if (info[4]) {
 					removeDate = *((bool*) info[4]);
 					if (removeDate) {
 						*reminderToAdd->datetime->valid = false;
 					}
-					//printf("removeDate: %d\n", removeDate);
 				}
 
 				*reminderToAdd->notified = false;
