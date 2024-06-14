@@ -187,12 +187,14 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 				double timeSinceReminder = difftime(now, *reminderTime);
 
 				if (timeSinceReminder >= 0) {
-					char commandString[messageLen + 14];
-					sprintf(commandString, "notify-send \"%s\"", message);
+					char commandStringOnTime[messageLen + 70];
+					sprintf(commandStringOnTime, "notify-send \"%s\" -h string:desktop-entry:task -h string:category:ontime", message);
+					char commandStringLate[messageLen + 68];
+					sprintf(commandStringLate, "notify-send \"%s\" -h string:desktop-entry:task -h string:category:late", message);
 					if (timeSinceReminder <= 60) {
-						system(commandString);
+						system(commandStringOnTime);
 					} else {
-						system(commandString);
+						system(commandStringLate);
 					}
 					*reminderToAdd->notified = true;
 				}
