@@ -350,11 +350,11 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, char* saveFilePath,
 task add <description> \n\
 \tcreates a new reminder. \n\
 Available flags for TASK ADD: \n\
-\t[-d] specify a date to notify about this reminder, in the format MM-DD-YY. If -t flag is not set, the time defaults to 12am. \n\
+\t[-d] specify a date to notify about this reminder, in the format mm-dd-yy. If -t flag is not set, the time defaults to 12am. \n\
 \t\tCan also use keywords \'mon\', \'tues\', \'wed\', \'thurs\', \'fri\', \'sat\', \'sun\', or any weekday's full name to schedule the reminder within the next 8 days.\n\
 \t\tNote that if today's weekday is typed, then the date defaults to next week, NOT today.\n\
 \t\tAlternatively keywords \'today\', \'td\', \'tomorrow\', and \'tmr\' also work.\n\
-\t[-t] specify a time to notify about this reminder, in the format hh:mm(am/pm). If -d flag is not set, the date defaults to today. \n\
+\t[-t] specify a time to notify about this reminder, in the format hh:mm(am/pm) OR hh(am/pm) for a specific hour. If -d flag is not set, the date defaults to today. \n\
 \t[-e] specify an extra note for this reminder, to describe it in more detail.\n\n\
 task (l | ls) \n\
 \tlists all current reminders. Also reveals each reminder's id.\n\
@@ -367,11 +367,11 @@ task edit <id> \n\
 Available flags for TASK EDIT: \n\
 \t[-m] specify a new description for this reminder.\n\
 \t[-e] specify a new extra note for this reminder.\n\
-\t[-d] specify a new date for this reminder, in the format MM-DD-YY. To remove BOTH DATE AND TIME from this reminder, use the keyword \'none\'.\n\
+\t[-d] specify a new date for this reminder, in the format mm-dd-yy. To remove BOTH DATE AND TIME from this reminder, use the keyword \'none\'.\n\
 \t\tCan also use keywords \'mon\', \'tues\', \'wed\', \'thurs\', \'fri\', \'sat\', \'sun\', or any weekday's full name to schedule the reminder within the next 8 days.\n\
 \t\tNote that if today's weekday is typed, then the date defaults to next week, NOT today.\n\
 \t\tAlternatively keywords \'today\', \'td\', \'tomorrow\', and \'tmr\' also work.\n\
-\t[-t] specify a new time for this reminder, in the format hh:mm(am/pm).\n");
+\t[-t] specify a new time for this reminder, in the format hh:mm(am/pm) OR hh(am/pm) for a specific hour.\n");
 	exit(1);
 }
 
