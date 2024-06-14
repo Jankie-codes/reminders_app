@@ -303,7 +303,11 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, char* saveFilePath,
 			perror("Error opening file");
 			break;
 		case 8:
-			break;
+			freeBST(bst);
+			freeReminderArrayNotItems(ra);
+			free(saveFilePath);
+			free(status);
+			exit(1);
 		case 9:
 			printf("Invalid ID specified. Please ensure that the reminder ID argument is a number\n");
 			break;
@@ -321,7 +325,6 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, char* saveFilePath,
 			break;
 		case 14:
 			printf("A reminders app written in C. Create and complete reminders with ease.\n");
-			printf("No command entered. Please specify a command\n");
 			break;
 		case 15:
 			printf("No message specified. Please specify a message for the reminder to add\n");
@@ -343,6 +346,32 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, char* saveFilePath,
 	freeReminderArrayNotItems(ra);
 	free(saveFilePath);
 	free(status);
+	printf("\nAvailable commands:\n\n\
+task add <description> \n\
+\tcreates a new reminder. \n\
+Available flags for TASK ADD: \n\
+\t[-d] specify a date to notify about this reminder, in the format MM-DD-YY. If -t flag is not set, the time defaults to 12am. \n\
+\t\tCan also use keywords \'mon\', \'tues\', \'wed\', \'thurs\', \'fri\', \'sat\', \'sun\', or any weekday's full name to schedule the reminder within the next 8 days.\n\
+\t\tNote that if today's weekday is typed, then the date defaults to next week, NOT today.\n\
+\t\tAlternatively keywords \'today\', \'td\', \'tomorrow\', and \'tmr\' also work.\n\
+\t[-t] specify a time to notify about this reminder, in the format hh:mm(am/pm). If -d flag is not set, the date defaults to today. \n\
+\t[-e] specify an extra note for this reminder, to describe it in more detail.\n\n\
+task (l | ls) \n\
+\tlists all current reminders. Also reveals each reminder's id.\n\
+No available flags for task l or task ls.\n\n\
+task (remove | complete) <id> \n\
+\tremoves a reminder with the given id. To view reminder ids, use task l or task ls. NOTE THAT individual reminder ids change as new reminders are added and deleted.\n\
+No available flags for task remove or task complete.\n\n\
+task edit <id> \n\
+\tedits a reminder with the given id. To view reminder ids, use task l or task ls. NOTE THAT individual reminder ids change as new reminders are added and deleted.\n\
+Available flags for TASK EDIT: \n\
+\t[-m] specify a new description for this reminder.\n\
+\t[-e] specify a new extra note for this reminder.\n\
+\t[-d] specify a new date for this reminder, in the format MM-DD-YY. To remove BOTH DATE AND TIME from this reminder, use the keyword \'none\'.\n\
+\t\tCan also use keywords \'mon\', \'tues\', \'wed\', \'thurs\', \'fri\', \'sat\', \'sun\', or any weekday's full name to schedule the reminder within the next 8 days.\n\
+\t\tNote that if today's weekday is typed, then the date defaults to next week, NOT today.\n\
+\t\tAlternatively keywords \'today\', \'td\', \'tomorrow\', and \'tmr\' also work.\n\
+\t[-t] specify a new time for this reminder, in the format hh:mm(am/pm).\n");
 	exit(1);
 }
 
