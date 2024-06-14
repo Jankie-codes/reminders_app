@@ -15,6 +15,8 @@ Relevant Archwiki forum (which helped me personally): https://wiki.archlinux.org
 
 The app also requires the **gcc C compiler** which the makefile uses.
 
+Finally, the app requires that `notify-send` is installed into your path.
+
 ## Installation (Read Dependecies Section First!)
 
 FIRST: make sure that cron daemon and gcc is installed. For more information, please see the **App Dependencies** section above.
@@ -125,6 +127,25 @@ $ task
 ```
 
 Typing invalid commands will also invoke a man page.
+
+## Uninstallation
+
+Currently, uninstallation can only be done manually.
+
+Start by removing both `task` and `notify` apps from `/usr/local/bin` where it was installed.
+```
+$ rm /usr/local/bin/task
+$ rm /usr/local/bin/notify
+```
+
+Then, edit the crontab using:
+
+```
+$ crontab -e
+```
+This opens a text file containing all crontab commands. Delete the line `* * * * * XDG_RUNTIME_DIR="/run/user/1000" DISPLAY=:0 /usr/local/bin/notify` which tells the system to check for notifications every minute.
+
+Finally, delete the repository folder on your machine using `rm -rf`.
 
 ## Special Thanks
 Special thanks go to my AWESUM brother the GOAT for supporting me throughout this app's development.
