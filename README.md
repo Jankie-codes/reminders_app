@@ -56,10 +56,16 @@ $ task add "description" -d 06-13-24 -t 3:04pm -e "extra note here"
 ```
 
 Note that for the -d flag, keywords such as (but not limited by) "mon", "wed", "wednesday", "today"
- or "td", and "tomorrow" or "tmr" all work.
+ or "td", and "tomorrow" or "tmr" all work. Otherwise, use the format mm-dd-yy.
+
+The -t flag accepts times in HH:MM(am/pm) OR HH(am/pm) format.
+
+Other examples:
 
 ```
 $ task add description2 -d today -t 9:30am
+$ task add description3
+$ task add "multiple word description" -t 12pm -e "multi-word note"
 ```
 
 ### List reminders:
@@ -106,6 +112,19 @@ At least one flag (-m, -d, -t, or -e) is mandatory.
 ```
 $ task edit 1 -m "new description" -d tmr -e "new extra note" -t 7pm
 ```
+
+Note that for the -d flag, keywords such as (but not limited by) "mon", "wed", "wednesday", "today"
+or "td", and "tomorrow" or "tmr" all work. Otherwise, use the format mm-dd-yy.
+
+The -t flag accepts times in HH:MM(am/pm) OR HH(am/pm) format.
+
+### View man page and more information on each command:
+
+```
+$ task
+```
+
+Typing invalid commands will also invoke a man page.
 
 ## Special Thanks
 Special thanks go to my AWESUM brother the GOAT for supporting me throughout this app's development.
