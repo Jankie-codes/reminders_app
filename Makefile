@@ -18,7 +18,7 @@ install: notify task
 	which crontab
 	cp notify /usr/local/bin
 	cp task /usr/local/bin
-	(crontab -l ; echo "* * * * * notify")| crontab -
+	THISUSER=`logname`; (crontab -l -u $$THISUSER 2>/dev/null; echo "* * * * * XDG_RUNTIME_DIR=\"/run/user/1000\" DISPLAY=:0 /usr/local/bin/notify")| crontab -u $$THISUSER -
 
 clean:
 	rm notify task *.o

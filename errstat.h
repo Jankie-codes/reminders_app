@@ -21,6 +21,7 @@ typedef enum ErrStat {
 	ENOIDEDIT,
 	ETIMEOVERRIDDEN,
 	ENOEDITFLAGS,
+	ENOHOMEENV,
 } ErrStat;
 
 #endif

@@ -14,12 +14,18 @@ int main() {
 	ReminderArray remindersList;
 	BST* remindersBST = initBST(remindersBST);
 	initReminderArray(&remindersList, 1);
+
+	char* saveFilePath = "";
+	char** pSaveFilePath = &saveFilePath;
+	getSaveFilePath(pSaveFilePath);
+	saveFilePath = *pSaveFilePath;
 	
   fptr = fopen(saveFilePath,"r");
 	if (fptr == NULL) {
 		printf("Error opening file\n");
 		freeReminderArrayNotItems(&remindersList);
 		freeBST(remindersBST);
+		free(saveFilePath);
 		exit(1);
 	}
 
@@ -33,6 +39,7 @@ int main() {
 		printf("Error opening file\n");
 		freeReminderArrayNotItems(&remindersList);
 		freeBST(remindersBST);
+		free(saveFilePath);
 		exit(1);
 	}
 
@@ -40,4 +47,5 @@ int main() {
 	fclose(fptr);
 	freeReminderArrayNotItems(&remindersList);
 	freeBST(remindersBST);
+	free(saveFilePath);
 }

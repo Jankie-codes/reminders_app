@@ -1,7 +1,7 @@
 #ifndef REMFILES_H
 #define REMFILES_H
 
-extern char* saveFilePath;
+ErrStat getSaveFilePath(char**);
 
 int system(const char*);
 

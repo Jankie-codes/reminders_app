@@ -7,7 +7,21 @@
 #include"errstat.h"
 #include"reminders.h"
 
-char* saveFilePath = "./reminders_save_file.txt";
+char* saveFilePathAfterHome = ".cache/task";
+
+ErrStat getSaveFilePath(char** pSaveFilePath) {
+	const char* home = getenv("HOME");
+  if (home == NULL) {
+     return ENOHOMEENV;
+	}
+	char* saveFilePath = malloc(sizeof(char) * (strlen(home) + 1 + strlen(saveFilePathAfterHome) + 1));
+
+	sprintf(saveFilePath, "%s/.cache/task", home);
+
+	*pSaveFilePath = saveFilePath;
+
+	return EOK;
+}
 
 int system(const char* command);
 

@@ -273,7 +273,7 @@ ErrStat parseArgsAddReminder(int argc, char** argv, BST* bst, void** status) {
 	return EOK;
 }
 
-void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
+void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, char* saveFilePath, void** status) {
 	switch (errStat) {
 		case 0: 
 			//ok
@@ -300,7 +300,7 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 			free(*status);
 			break;
 		case 7:
-			printf("Error opening file\n");
+			perror("Error opening file");
 			break;
 		case 8:
 			break;
@@ -335,9 +335,13 @@ void errHandle(ErrStat errStat, ReminderArray* ra, BST* bst, void** status) {
 		case 18:
 			printf("No edit flags specified\n");
 			break;
+		case 19:
+			printf("$HOME environment variable is not set. Cannot create/access save file\n");
+			break;
 	}
 	freeBST(bst);
 	freeReminderArrayNotItems(ra);
+	free(saveFilePath);
 	free(status);
 	exit(1);
 }
@@ -451,45 +455,54 @@ int main(int argc, char** argv) {
 
 		void** status = malloc(sizeof(void*));
 		ErrStat errStat;
+
+		char* saveFilePath = "";
+		char** pSaveFilePath = &saveFilePath;
+		errHandle(getSaveFilePath(pSaveFilePath), &remindersList, remindersBST, NULL, status);
+
+		saveFilePath = *pSaveFilePath;
 		
 		if (argc < 2) {
-			errHandle(ENOCOMMAND, &remindersList, remindersBST, status);
+			errHandle(ENOCOMMAND, &remindersList, remindersBST, saveFilePath, status);
 		}
 
 		struct stat buffer;
 
 		if (stat(saveFilePath, &buffer) == -1) {
 			fptr = fopen(saveFilePath, "w");
+			if (fptr == NULL) {
+				errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
+				exit(1);
+			}
 			initFile(fptr);
 			fclose(fptr);
 		}		
-
 		if (strcmp("add", argv[1]) == 0) {
 					fptr = fopen(saveFilePath,"r");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 
 					readFile(remindersBST, fptr, 0, NULL);
 					fclose(fptr);
 
-					errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, status);
+					errHandle(parseArgsAddReminder(argc, argv, remindersBST, status), &remindersList, remindersBST, saveFilePath, status);
 					bstToArray(remindersBST, &remindersList);
 
 					fptr = fopen(saveFilePath,"w");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
-					errHandle(EOKFINAL, &remindersList, remindersBST, status);
+					errHandle(EOKFINAL, &remindersList, remindersBST, saveFilePath, status);
 		} else if (strcmp("l", argv[1]) == 0 || strcmp("ls", argv[1]) == 0) {
 					fptr = fopen(saveFilePath,"r");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 					readFile(remindersBST, fptr, 0, NULL);
@@ -499,7 +512,7 @@ int main(int argc, char** argv) {
 
 					printReminders(&remindersList);
 					
-					errHandle(EOKFINAL, &remindersList, remindersBST, status);
+					errHandle(EOKFINAL, &remindersList, remindersBST, saveFilePath, status);
 		} else if (strcmp("edit", argv[1]) == 0) {
 					int id;
 					int* pId = &id;
@@ -517,7 +530,7 @@ int main(int argc, char** argv) {
 					bool removeDate = false;
 					bool* pRemoveDate = &removeDate;
 
-					errHandle(parseArgsForEditing(argc, argv, status, pDateFields, dateFieldsSize, pRemoveDate, pDescription, pMessage, pId), &remindersList, remindersBST, status);
+					errHandle(parseArgsForEditing(argc, argv, status, pDateFields, dateFieldsSize, pRemoveDate, pDescription, pMessage, pId), &remindersList, remindersBST, saveFilePath, status);
 
 					void* fieldsToEditArray[5];
 
@@ -530,73 +543,73 @@ int main(int argc, char** argv) {
 					
 					fptr = fopen(saveFilePath,"r");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
-					errHandle(readFile(remindersBST, fptr, 4, fieldsToEdit), &remindersList, remindersBST, status);
+					errHandle(readFile(remindersBST, fptr, 4, fieldsToEdit), &remindersList, remindersBST, saveFilePath, status);
 					fclose(fptr);
 
 					bstToArray(remindersBST, &remindersList);
 
 					fptr = fopen(saveFilePath,"w");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
 
-					errHandle(EOKFINAL, &remindersList, remindersBST, status);
+					errHandle(EOKFINAL, &remindersList, remindersBST, saveFilePath, status);
 		} else if (strcmp("remove", argv[1]) == 0) {
-					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
+					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, saveFilePath, status);
 					int idToRemove = atoi(argv[2]);
 					int* pIdToRemove = &idToRemove;
 					int** ppIdToRemove = &pIdToRemove;
 
 					fptr = fopen(saveFilePath,"r");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
-					errHandle(readFile(remindersBST, fptr, 1, (void**)ppIdToRemove), &remindersList, remindersBST, status);
+					errHandle(readFile(remindersBST, fptr, 1, (void**)ppIdToRemove), &remindersList, remindersBST, saveFilePath, status);
 					fclose(fptr);
 
 					bstToArray(remindersBST, &remindersList);
 
 					fptr = fopen(saveFilePath, "w");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
-					errHandle(EOKFINAL, &remindersList, remindersBST, status);
+					errHandle(EOKFINAL, &remindersList, remindersBST, saveFilePath, status);
 		} else if (strcmp("complete", argv[1]) == 0) {
-					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, status);
+					errHandle(parseArgsRemoveReminder(argc, argv), &remindersList, remindersBST, saveFilePath, status);
 					int idToRemove = atoi(argv[2]);
 					int* pIdToRemove = &idToRemove;
 					int** ppIdToRemove = &pIdToRemove;
 
 					fptr = fopen(saveFilePath,"r");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
-					errHandle(readFile(remindersBST, fptr, 2, (void**)ppIdToRemove), &remindersList, remindersBST, status);
+					errHandle(readFile(remindersBST, fptr, 2, (void**)ppIdToRemove), &remindersList, remindersBST, saveFilePath, status);
 					fclose(fptr);
 
 					bstToArray(remindersBST, &remindersList);
 
 					fptr = fopen(saveFilePath, "w");
 					if (fptr == NULL) {
-						errHandle(EFILE, &remindersList, remindersBST, status);
+						errHandle(EFILE, &remindersList, remindersBST, saveFilePath, status);
 						exit(1);
 					}
 					rewriteFile(&remindersList, fptr);
 					fclose(fptr);
-					errHandle(EOKFINAL, &remindersList, remindersBST, status);
+					errHandle(EOKFINAL, &remindersList, remindersBST, saveFilePath, status);
 		}
-		errHandle(EBADCOMMAND, &remindersList, remindersBST, status);
+		errHandle(EBADCOMMAND, &remindersList, remindersBST, saveFilePath, status);
 }
 
