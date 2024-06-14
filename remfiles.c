@@ -186,7 +186,7 @@ ErrStat readFile(BST* remindersBST, FILE* fptr, int mode, void** info) {
 
 				double timeSinceReminder = difftime(now, *reminderTime);
 
-				if (timeSinceReminder > 0) {
+				if (timeSinceReminder >= 0) {
 					char commandString[messageLen + 14];
 					sprintf(commandString, "notify-send \"%s\"", message);
 					if (timeSinceReminder <= 60) {
